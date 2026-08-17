@@ -22,11 +22,22 @@ import type {
   BusinessInsight,
 } from '../types';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+const getBaseUrl = (): string => {
+  let rawUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api').trim();
+  // Remove trailing slashes
+  rawUrl = rawUrl.replace(/\/+$/, '');
+  // If the user provided URL without /api, append it automatically
+  if (!rawUrl.endsWith('/api') && !rawUrl.includes('/api/')) {
+    rawUrl = `${rawUrl}/api`;
+  }
+  return rawUrl;
+};
+
+const API_BASE_URL = getBaseUrl();
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 15000,
+  timeout: 60000, // 60 seconds to support Render free tier cold-start wakeups
 });
 
 const buildParams = (filters?: FilterState) => {
