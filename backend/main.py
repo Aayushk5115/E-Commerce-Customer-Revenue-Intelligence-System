@@ -1,16 +1,22 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker
-import pandas as pd
+from typing import Optional, List, Dict, Any
 import os
-from dotenv import load_dotenv
+import sys
 
-load_dotenv()
-DB_URL = os.getenv("DATABASE_URL")
+# Ensure local imports work whether run from root or backend directory
+sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-app = FastAPI(title="E-Commerce Intelligence API")
+from analytics_engine import engine
 
+app = FastAPI(
+    title="E-Commerce Customer & Revenue Intelligence API",
+    description="High-performance analytics API powering executive overview, customer RFM/churn intelligence, product analytics, ARIMA forecasting, marketing ROAS/CAC, and dynamic business insights.",
+    version="2.0.0"
+)
+
+# Enable CORS for frontend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -19,132 +25,267 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Database Setup
-engine = create_engine(DB_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to E-Commerce Intelligence API"}
+    return {
+        "status": "online",
+        "service": "E-Commerce Customer & Revenue Intelligence API",
+        "version": "2.0.0",
+        "docs_url": "/docs"
+    }
 
+# ==========================================
+# 1. FILTER OPTIONS
+# ==========================================
+@app.get("/api/filters")
+def get_filters():
+    """Returns available categories, regions, acquisition channels, segments, brands, and date range limits."""
+    return engine.get_filter_options()
+
+# ==========================================
+# 2. EXECUTIVE & FINANCIAL METRICS
+# ==========================================
 @app.get("/api/kpis")
-def get_kpis(db = Depends(get_db)):
-    try:
-        # We can either query the DB or use our pandas logic if DB isn't populated
-        query = text("""
-            SELECT 
-                SUM(total_amount) as total_revenue,
-                COUNT(order_id) as total_orders,
-                COUNT(DISTINCT customer_id) as total_customers
-            FROM orders WHERE order_status != 'Cancelled'
-        """)
-        result = db.execute(query).fetchone()
-        
-        profit_query = text("""
-            SELECT SUM(item_profit) as total_profit 
-            FROM order_items oi JOIN orders o ON oi.order_id = o.order_id 
-            WHERE o.order_status != 'Cancelled'
-        """)
-        profit_result = db.execute(profit_query).fetchone()
-        
-        rev = result.total_revenue or 0
-        orders = result.total_orders or 0
-        cust = result.total_customers or 0
-        profit = profit_result.total_profit or 0
-        
-        return {
-            "total_revenue": float(rev),
-            "total_profit": float(profit),
-            "total_orders": orders,
-            "total_customers": cust,
-            "aov": float(rev / orders) if orders > 0 else 0,
-            "profit_margin": float(profit / rev) if rev > 0 else 0
-        }
-    except Exception as e:
-        # Fallback to mock data if DB fails
-        return {
-            "total_revenue": 15000000,
-            "total_profit": 3000000,
-            "total_orders": 85000,
-            "total_customers": 20000,
-            "aov": 176.47,
-            "profit_margin": 0.20
-        }
+def get_kpis(
+    start_date: Optional[str] = Query(None, description="YYYY-MM-DD"),
+    end_date: Optional[str] = Query(None, description="YYYY-MM-DD"),
+    category: Optional[str] = Query(None),
+    region: Optional[str] = Query(None),
+    channel: Optional[str] = Query(None),
+    segment: Optional[str] = Query(None)
+):
+    """Calculates Total Revenue, Profit, Margin, Orders, Customers, AOV, Retention Rate with period deltas."""
+    return engine.calculate_kpis(
+        start_date=start_date,
+        end_date=end_date,
+        category=category,
+        region=region,
+        channel=channel,
+        segment=segment
+    )
 
 @app.get("/api/revenue/trend")
-def get_revenue_trend(db = Depends(get_db)):
-    try:
-        query = text("""
-            SELECT DATE_TRUNC('month', order_date) as month, SUM(total_amount) as revenue
-            FROM orders WHERE order_status != 'Cancelled'
-            GROUP BY 1 ORDER BY 1
-        """)
-        results = db.execute(query).fetchall()
-        return [{"month": str(r.month.date()), "revenue": float(r.revenue)} for r in results]
-    except:
-        # Fallback to ML output if DB is unavailable
-        try:
-            df = pd.read_csv('../data/ml_output/historical_revenue.csv')
-            return df.to_dict(orient='records')
-        except:
-            return []
+def get_revenue_trend(
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    category: Optional[str] = Query(None),
+    region: Optional[str] = Query(None),
+    channel: Optional[str] = Query(None),
+    segment: Optional[str] = Query(None)
+):
+    """Returns monthly revenue, profit, orders, and YoY / MoM growth rates."""
+    return engine.get_revenue_trend(
+        start_date=start_date,
+        end_date=end_date,
+        category=category,
+        region=region,
+        channel=channel,
+        segment=segment
+    )
 
-@app.get("/api/forecast")
-def get_forecast():
-    try:
-        df = pd.read_csv('../data/ml_output/revenue_forecast.csv')
-        return df.to_dict(orient='records')
-    except:
-        return {"error": "Forecast not generated yet"}
+@app.get("/api/revenue/by-category")
+def get_revenue_by_category(
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    region: Optional[str] = Query(None),
+    channel: Optional[str] = Query(None)
+):
+    """Returns revenue, profit, order counts, and share % per product category."""
+    return engine.get_revenue_by_category(
+        start_date=start_date,
+        end_date=end_date,
+        region=region,
+        channel=channel
+    )
+
+@app.get("/api/revenue/by-region")
+def get_revenue_by_region(
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    category: Optional[str] = Query(None),
+    channel: Optional[str] = Query(None),
+    limit: int = Query(10, ge=1, le=50)
+):
+    """Returns geographic revenue and order distribution by state/region."""
+    return engine.get_revenue_by_region(
+        start_date=start_date,
+        end_date=end_date,
+        category=category,
+        channel=channel,
+        limit=limit
+    )
+
+@app.get("/api/revenue/top-products")
+def get_top_products(
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    category: Optional[str] = Query(None),
+    region: Optional[str] = Query(None),
+    limit: int = Query(10, ge=1, le=50)
+):
+    """Returns top performing products by revenue, profit, and volume."""
+    return engine.get_top_products(
+        start_date=start_date,
+        end_date=end_date,
+        category=category,
+        region=region,
+        limit=limit
+    )
+
+# ==========================================
+# 3. CUSTOMER INTELLIGENCE & CHURN
+# ==========================================
+@app.get("/api/customers/kpis")
+def get_customer_kpis(
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    channel: Optional[str] = Query(None),
+    segment: Optional[str] = Query(None)
+):
+    """Returns customer KPIs: CLV, Repeat Purchase Rate, Churn Rate, High-Risk Customers, Revenue at Risk."""
+    return engine.get_customer_kpis(
+        start_date=start_date,
+        end_date=end_date,
+        channel=channel,
+        segment=segment
+    )
 
 @app.get("/api/customers/segments")
-def get_segments():
-    try:
-        df = pd.read_csv('../data/ml_output/customer_segments.csv')
-        segments = df['Segment'].value_counts().reset_index()
-        segments.columns = ['name', 'value']
-        return segments.to_dict(orient='records')
-    except:
-        return {"error": "Segments not generated yet"}
+def get_customer_segments():
+    """Returns customer distribution across RFM segments with counts, percentage, revenue, and average spend."""
+    return engine.get_customer_segments()
 
 @app.get("/api/customers/churn")
-def get_churn_risk():
-    try:
-        df = pd.read_csv('../data/ml_output/churn_predictions.csv')
-        risk_dist = df['risk_level'].value_counts().reset_index()
-        risk_dist.columns = ['name', 'value']
-        return risk_dist.to_dict(orient='records')
-    except:
-        return {"error": "Churn predictions not generated yet"}
+def get_churn_analytics():
+    """Returns churn risk distribution (Low/Med/High), scikit-learn model evaluation metrics, and feature importances."""
+    return engine.get_churn_analytics()
 
+@app.get("/api/customers/clv-distribution")
+def get_clv_distribution():
+    """Returns customer lifetime value distribution by spend brackets."""
+    return engine.get_clv_distribution()
+
+@app.get("/api/customers/retention-trend")
+def get_customer_retention_trend():
+    """Returns monthly customer retention rates over time."""
+    return engine.get_customer_retention_trend()
+
+@app.get("/api/customers")
+def get_customers(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    search: Optional[str] = Query(None),
+    segment: Optional[str] = Query(None),
+    risk_level: Optional[str] = Query(None),
+    sort_by: str = Query('total_spent'),
+    sort_order: str = Query('desc')
+):
+    """Paginated, searchable, sortable list of customers with RFM scores, churn probabilities, and order stats."""
+    return engine.get_customers_table(
+        page=page,
+        page_size=page_size,
+        search=search,
+        segment=segment,
+        risk_level=risk_level,
+        sort_by=sort_by,
+        sort_order=sort_order
+    )
+
+# ==========================================
+# 4. PRODUCT INTELLIGENCE
+# ==========================================
+@app.get("/api/products/kpis")
+def get_product_kpis(
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    category: Optional[str] = Query(None),
+    brand: Optional[str] = Query(None)
+):
+    """Returns total products, units sold, revenue, profit, avg margin, return rate, and best sellers."""
+    return engine.get_product_kpis(
+        start_date=start_date,
+        end_date=end_date,
+        category=category,
+        brand=brand
+    )
+
+@app.get("/api/products/performance")
+def get_product_performance(
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    category: Optional[str] = Query(None),
+    brand: Optional[str] = Query(None)
+):
+    """Returns category breakdown, top revenue/profit products, scatter plot data, and 2x2 BCG quadrant matrix."""
+    return engine.get_product_performance(
+        start_date=start_date,
+        end_date=end_date,
+        category=category,
+        brand=brand
+    )
+
+@app.get("/api/products")
+def get_products(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    search: Optional[str] = Query(None),
+    category: Optional[str] = Query(None),
+    brand: Optional[str] = Query(None),
+    sort_by: str = Query('revenue'),
+    sort_order: str = Query('desc')
+):
+    """Paginated, searchable, sortable product catalog with units sold, revenue, profit, margin, and return rate."""
+    return engine.get_products_table(
+        page=page,
+        page_size=page_size,
+        search=search,
+        category=category,
+        brand=brand,
+        sort_by=sort_by,
+        sort_order=sort_order
+    )
+
+# ==========================================
+# 5. TIME SERIES FORECASTING
+# ==========================================
+@app.get("/api/forecast")
+def get_forecast(horizon: int = Query(6, ge=3, le=12)):
+    """Returns actual monthly revenue + ARIMA forecasted revenue with 95% confidence intervals and model comparisons."""
+    return engine.get_forecast(horizon=horizon)
+
+# ==========================================
+# 6. COHORT RETENTION ANALYSIS
+# ==========================================
+@app.get("/api/cohorts")
+def get_cohorts():
+    """Returns first-purchase cohort retention matrix heatmap for Month 0 through Month 11."""
+    return engine.get_cohort_analysis()
+
+# ==========================================
+# 7. MARKETING & ACQUISITION ANALYTICS
+# ==========================================
+@app.get("/api/marketing")
+def get_marketing():
+    """Returns marketing spend, revenue, CAC, ROAS, conversion rate, channel comparison, and campaign performance."""
+    return engine.get_marketing_analytics()
+
+# ==========================================
+# 8. DYNAMIC BUSINESS INSIGHTS ENGINE
+# ==========================================
 @app.get("/api/insights")
-def get_business_insights():
-    insights = []
-    
-    # 1. Dummy Business Insight Engine Logic
-    # In a real scenario, this would use current data. For now we use the mock/fallback logic.
-    insights.append({
-        "finding": "High Churn Probability in 'New Customers' segment",
-        "why_it_matters": "Acquisition costs are wasted if new users don't make a second purchase.",
-        "recommendation": "Implement an automated welcome email series with a 15% discount for the second order.",
-        "expected_impact": "Increase repeat purchase rate by 5-10%"
-    })
-    
-    insights.append({
-        "finding": "Profit Margin in 'Electronics' is below target (12%)",
-        "why_it_matters": "Electronics drive 40% of revenue but are suppressing overall profitability.",
-        "recommendation": "Bundle high-margin accessories with smartphones and laptops.",
-        "expected_impact": "Improve category margin by 3-5%"
-    })
-    
-    return insights
+def get_insights(
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    category: Optional[str] = Query(None),
+    region: Optional[str] = Query(None)
+):
+    """Generates automated, rule-based business insights and action recommendations from live filtered metrics."""
+    return engine.get_business_insights(
+        start_date=start_date,
+        end_date=end_date,
+        category=category,
+        region=region
+    )
 
 if __name__ == "__main__":
     import uvicorn
