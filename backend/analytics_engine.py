@@ -33,29 +33,86 @@ class AnalyticsEngine:
         self._initialized = True
 
     def load_data(self):
-        print(f"[AnalyticsEngine] Loading datasets from {self.data_dir}...")
+        import gc
+        print(f"[AnalyticsEngine] Loading optimized datasets from {self.data_dir}...")
         
-        # Load CSVs
-        self.orders_df = pd.read_csv(os.path.join(self.data_dir, "orders.csv"))
+        # 1. Load Orders with tight dtypes
+        orders_cols = ['order_id', 'customer_id', 'order_date', 'order_status', 'shipping_state', 'total_amount']
+        orders_dtypes = {
+            'order_id': 'int32',
+            'customer_id': 'int32',
+            'order_status': 'category',
+            'shipping_state': 'category',
+            'total_amount': 'float32'
+        }
+        self.orders_df = pd.read_csv(
+            os.path.join(self.data_dir, "orders.csv"),
+            usecols=orders_cols,
+            dtype=orders_dtypes
+        )
         self.orders_df['order_date'] = pd.to_datetime(self.orders_df['order_date'])
         
-        self.order_items_df = pd.read_csv(os.path.join(self.data_dir, "order_items.csv"))
-        self.customers_df = pd.read_csv(os.path.join(self.data_dir, "customers.csv"))
+        # 2. Load Order Items
+        items_cols = ['order_id', 'product_id', 'quantity', 'item_revenue', 'item_cost', 'item_profit']
+        items_dtypes = {
+            'order_id': 'int32',
+            'product_id': 'int32',
+            'quantity': 'int16',
+            'item_revenue': 'float32',
+            'item_cost': 'float32',
+            'item_profit': 'float32'
+        }
+        order_items_df = pd.read_csv(
+            os.path.join(self.data_dir, "order_items.csv"),
+            usecols=items_cols,
+            dtype=items_dtypes
+        )
+        
+        # 3. Load Customers
+        cust_cols = ['customer_id', 'first_name', 'last_name', 'email', 'city', 'state', 'acquisition_channel', 'signup_date']
+        cust_dtypes = {
+            'customer_id': 'int32',
+            'acquisition_channel': 'category',
+            'state': 'category'
+        }
+        self.customers_df = pd.read_csv(
+            os.path.join(self.data_dir, "customers.csv"),
+            usecols=cust_cols,
+            dtype=cust_dtypes
+        )
         self.customers_df['signup_date'] = pd.to_datetime(self.customers_df['signup_date'])
         
-        self.products_df = pd.read_csv(os.path.join(self.data_dir, "products.csv"))
-        self.returns_df = pd.read_csv(os.path.join(self.data_dir, "returns.csv"))
-        if 'return_date' in self.returns_df.columns:
-            self.returns_df['return_date'] = pd.to_datetime(self.returns_df['return_date'])
-            
+        # 4. Load Products
+        prod_cols = ['product_id', 'product_name', 'category', 'subcategory', 'brand', 'unit_cost', 'selling_price', 'stock_quantity']
+        prod_dtypes = {
+            'product_id': 'int32',
+            'category': 'category',
+            'subcategory': 'category',
+            'brand': 'category',
+            'unit_cost': 'float32',
+            'selling_price': 'float32',
+            'stock_quantity': 'int32'
+        }
+        self.products_df = pd.read_csv(
+            os.path.join(self.data_dir, "products.csv"),
+            usecols=prod_cols,
+            dtype=prod_dtypes
+        )
+        
+        # 5. Load Returns
+        self.returns_df = pd.read_csv(
+            os.path.join(self.data_dir, "returns.csv"),
+            usecols=['return_id', 'product_id'],
+            dtype={'return_id': 'int32', 'product_id': 'float32'}
+        )
+        self.returns_df['product_id'] = self.returns_df['product_id'].fillna(0).astype('int32')
+
+        # 6. Load Marketing Data
         self.marketing_campaigns_df = pd.read_csv(os.path.join(self.data_dir, "marketing_campaigns.csv"))
         self.marketing_perf_df = pd.read_csv(os.path.join(self.data_dir, "marketing_performance.csv"))
         self.marketing_perf_df['date'] = pd.to_datetime(self.marketing_perf_df['date'])
         
-        self.sessions_df = pd.read_csv(os.path.join(self.data_dir, "customer_sessions.csv"))
-        self.sessions_df['session_date'] = pd.to_datetime(self.sessions_df['session_date'])
-        
-        # Load ML Outputs if available, otherwise compute defaults
+        # 7. Load ML Outputs if available
         try:
             self.segments_df = pd.read_csv(os.path.join(self.ml_dir, "customer_segments.csv"))
         except Exception:
@@ -79,26 +136,30 @@ class AnalyticsEngine:
             self.historical_rev_df = pd.DataFrame()
 
         # Build merged fast-lookup structures
-        self._precompute_views()
-        print("[AnalyticsEngine] Data loaded and precomputed successfully.")
+        self._precompute_views(order_items_df)
+        del order_items_df
+        gc.collect()
+        print("[AnalyticsEngine] Data loaded and precomputed with ultra-low memory footprint.")
 
-    def _precompute_views(self):
+    def _precompute_views(self, order_items_df: pd.DataFrame):
+        import gc
         # Merge orders with items and products for fast item-level queries
-        items_merged = self.order_items_df.merge(
-            self.orders_df[['order_id', 'customer_id', 'order_date', 'order_status', 'shipping_state', 'payment_method', 'discount_amount']],
+        items_merged = order_items_df.merge(
+            self.orders_df[['order_id', 'customer_id', 'order_date', 'order_status', 'shipping_state']],
             on='order_id',
             how='inner'
         )
         items_merged = items_merged.merge(
-            self.products_df[['product_id', 'product_name', 'category', 'subcategory', 'brand', 'unit_cost', 'selling_price']],
+            self.products_df[['product_id', 'product_name', 'category', 'brand']],
             on='product_id',
             how='left'
         )
         items_merged = items_merged.merge(
-            self.customers_df[['customer_id', 'acquisition_channel', 'gender', 'age', 'city', 'state']],
+            self.customers_df[['customer_id', 'acquisition_channel']],
             on='customer_id',
             how='left'
         )
+        items_merged['month'] = items_merged['order_date'].dt.to_period('M').dt.to_timestamp()
         self.master_items_df = items_merged
 
         # Precompute customer aggregate stats
@@ -113,9 +174,9 @@ class AnalyticsEngine:
 
         # Merge with customers, segments, and churn predictions
         cust_full = self.customers_df.merge(cust_stats, on='customer_id', how='left')
-        cust_full['orders_count'] = cust_full['orders_count'].fillna(0).astype(int)
-        cust_full['total_spent'] = cust_full['total_spent'].fillna(0.0)
-        cust_full['avg_order_value'] = cust_full['avg_order_value'].fillna(0.0)
+        cust_full['orders_count'] = cust_full['orders_count'].fillna(0).astype('int16')
+        cust_full['total_spent'] = cust_full['total_spent'].fillna(0.0).astype('float32')
+        cust_full['avg_order_value'] = cust_full['avg_order_value'].fillna(0.0).astype('float32')
         
         if not self.segments_df.empty and 'customer_id' in self.segments_df.columns:
             cust_full = cust_full.merge(
@@ -123,9 +184,10 @@ class AnalyticsEngine:
                 on='customer_id',
                 how='left'
             )
-            cust_full['Segment'] = cust_full['Segment'].fillna('New Customers')
+            cust_full['Segment'] = cust_full['Segment'].fillna('New Customers').astype('category')
         else:
             cust_full['Segment'] = 'New Customers'
+            cust_full['Segment'] = cust_full['Segment'].astype('category')
             cust_full['RFM_Score'] = 3
             
         if not self.churn_df.empty and 'customer_id' in self.churn_df.columns:
@@ -134,15 +196,16 @@ class AnalyticsEngine:
                 on='customer_id',
                 how='left'
             )
-            cust_full['risk_level'] = cust_full['risk_level'].fillna('Low Risk')
-            cust_full['churn_probability'] = cust_full['churn_probability'].fillna(0.15)
+            cust_full['risk_level'] = cust_full['risk_level'].fillna('Low Risk').astype('category')
+            cust_full['churn_probability'] = cust_full['churn_probability'].fillna(0.15).astype('float32')
         else:
             cust_full['risk_level'] = 'Low Risk'
-            cust_full['churn_probability'] = 0.15
+            cust_full['risk_level'] = cust_full['risk_level'].astype('category')
+            cust_full['churn_probability'] = np.float32(0.15)
 
         self.master_customers_df = cust_full
 
-    def get_filter_options(self) -> Dict[str, Any]:
+        # Cache filter options
         min_date = self.orders_df['order_date'].min().strftime('%Y-%m-%d')
         max_date = self.orders_df['order_date'].max().strftime('%Y-%m-%d')
         categories = sorted([str(x) for x in self.products_df['category'].dropna().unique().tolist()])
@@ -154,7 +217,7 @@ class AnalyticsEngine:
         ]
         brands = sorted([str(x) for x in self.products_df['brand'].dropna().unique().tolist()])
 
-        return {
+        self._filter_options_cache = {
             "min_date": min_date,
             "max_date": max_date,
             "categories": categories,
@@ -163,6 +226,17 @@ class AnalyticsEngine:
             "segments": segments,
             "brands": brands
         }
+        
+        # Pre-cache static cohort and marketing responses
+        self._cached_cohorts = None
+        self._cached_marketing = None
+        self._cached_churn = None
+        self._cached_segments = None
+        self._cached_clv = None
+        self._cached_forecast_6 = None
+
+    def get_filter_options(self) -> Dict[str, Any]:
+        return self._filter_options_cache
 
     def _filter_orders(
         self,
@@ -173,20 +247,20 @@ class AnalyticsEngine:
         channel: Optional[str] = None,
         segment: Optional[str] = None
     ) -> pd.DataFrame:
-        df = self.master_items_df[self.master_items_df['order_status'] != 'Cancelled']
+        mask = (self.master_items_df['order_status'] != 'Cancelled')
 
         if start_date:
-            df = df[df['order_date'] >= pd.to_datetime(start_date)]
+            mask &= (self.master_items_df['order_date'] >= pd.to_datetime(start_date))
         if end_date:
-            df = df[df['order_date'] <= pd.to_datetime(end_date) + pd.Timedelta(days=1)]
+            mask &= (self.master_items_df['order_date'] <= pd.to_datetime(end_date) + pd.Timedelta(days=1))
         if category and category.lower() != 'all':
-            df = df[df['category'] == category]
+            mask &= (self.master_items_df['category'] == category)
         if region and region.lower() != 'all':
-            df = df[df['shipping_state'] == region]
+            mask &= (self.master_items_df['shipping_state'] == region)
         if channel and channel.lower() != 'all':
-            df = df[df['acquisition_channel'] == channel]
+            mask &= (self.master_items_df['acquisition_channel'] == channel)
             
-        return df
+        return self.master_items_df[mask]
 
     def calculate_kpis(
         self,
@@ -288,28 +362,22 @@ class AnalyticsEngine:
         if items.empty:
             return []
 
-        # Group by month
-        items = items.copy()
-        items['month'] = items['order_date'].dt.to_period('M').dt.to_timestamp()
-        
-        monthly = items.groupby('month').agg(
+        # Group by precalculated month
+        monthly = items.groupby('month', observed=True).agg(
             revenue=('item_revenue', 'sum'),
             profit=('item_profit', 'sum'),
             orders=('order_id', 'nunique'),
             customers=('customer_id', 'nunique')
         ).reset_index()
 
-        monthly['margin'] = monthly['profit'] / monthly['revenue'].replace(0, np.nan)
-        monthly['margin'] = monthly['margin'].fillna(0.0)
+        monthly['margin'] = (monthly['profit'] / monthly['revenue'].replace(0, np.nan)).fillna(0.0)
         
         # MoM and YoY calculations
         monthly['prev_month_rev'] = monthly['revenue'].shift(1)
-        monthly['mom_growth'] = ((monthly['revenue'] - monthly['prev_month_rev']) / monthly['prev_month_rev'].replace(0, np.nan)) * 100.0
-        monthly['mom_growth'] = monthly['mom_growth'].fillna(0.0)
+        monthly['mom_growth'] = ((monthly['revenue'] - monthly['prev_month_rev']) / monthly['prev_month_rev'].replace(0, np.nan) * 100.0).fillna(0.0)
         
         monthly['prev_year_rev'] = monthly['revenue'].shift(12)
-        monthly['yoy_growth'] = ((monthly['revenue'] - monthly['prev_year_rev']) / monthly['prev_year_rev'].replace(0, np.nan)) * 100.0
-        monthly['yoy_growth'] = monthly['yoy_growth'].fillna(0.0)
+        monthly['yoy_growth'] = ((monthly['revenue'] - monthly['prev_year_rev']) / monthly['prev_year_rev'].replace(0, np.nan) * 100.0).fillna(0.0)
 
         result = []
         for _, row in monthly.iterrows():
@@ -476,10 +544,12 @@ class AnalyticsEngine:
         }
 
     def get_customer_segments(self) -> List[Dict[str, Any]]:
+        if self._cached_segments is not None:
+            return self._cached_segments
         if self.master_customers_df.empty:
             return []
 
-        seg_agg = self.master_customers_df.groupby('Segment').agg(
+        seg_agg = self.master_customers_df.groupby('Segment', observed=True).agg(
             count=('customer_id', 'count'),
             total_revenue=('total_spent', 'sum'),
             avg_spend=('total_spent', 'mean'),
@@ -517,13 +587,16 @@ class AnalyticsEngine:
                 "color": colors.get(name, '#64748b')
             })
 
-        return sorted(result, key=lambda x: x['total_revenue'], reverse=True)
+        self._cached_segments = sorted(result, key=lambda x: x['total_revenue'], reverse=True)
+        return self._cached_segments
 
     def get_churn_analytics(self) -> Dict[str, Any]:
+        if self._cached_churn is not None:
+            return self._cached_churn
         cust = self.master_customers_df
         
         # Risk distribution
-        risk_dist = cust.groupby('risk_level').agg(
+        risk_dist = cust.groupby('risk_level', observed=True).agg(
             count=('customer_id', 'count'),
             revenue_at_risk=('total_spent', 'sum')
         ).reset_index()
@@ -585,25 +658,28 @@ class AnalyticsEngine:
             {"feature": "Age & Demographics", "importance": 0.020}
         ]
 
-        return {
+        self._cached_churn = {
             "distribution": dist_data,
             "models": models,
             "feature_importance": feature_importance
         }
+        return self._cached_churn
 
     def get_clv_distribution(self) -> List[Dict[str, Any]]:
+        if self._cached_clv is not None:
+            return self._cached_clv
         cust = self.master_customers_df
         bins = [0, 100, 250, 500, 1000, 2500, 1000000]
         labels = ['<$100', '$100-$250', '$250-$500', '$500-$1000', '$1000-$2500', '$2500+']
         
         cust_binned = pd.cut(cust['total_spent'], bins=bins, labels=labels, right=False)
-        clv_df = cust.groupby(cust_binned).agg(
+        clv_df = cust.groupby(cust_binned, observed=False).agg(
             count=('customer_id', 'count'),
             total_revenue=('total_spent', 'sum')
         ).reset_index()
 
         total = len(cust)
-        return [
+        self._cached_clv = [
             {
                 "range": str(r['total_spent']),
                 "customers": int(r['count']),
@@ -612,21 +688,19 @@ class AnalyticsEngine:
             }
             for _, r in clv_df.iterrows()
         ]
+        return self._cached_clv
 
     def get_customer_retention_trend(self) -> List[Dict[str, Any]]:
         # Approximate monthly retention
-        orders = self.orders_df[self.orders_df['order_status'] != 'Cancelled'].copy()
-        orders['month'] = orders['order_date'].dt.to_period('M').dt.to_timestamp()
-        
-        active = orders.groupby(['month', 'customer_id']).size().reset_index()[['month', 'customer_id']]
-        months = sorted(active['month'].unique())
+        orders = self.master_items_df[['month', 'customer_id']].drop_duplicates()
+        months = sorted(orders['month'].unique())
         
         trend = []
         for i in range(len(months) - 1):
             m_curr = months[i]
             m_next = months[i+1]
-            curr_users = set(active[active['month'] == m_curr]['customer_id'])
-            next_users = set(active[active['month'] == m_next]['customer_id'])
+            curr_users = set(orders[orders['month'] == m_curr]['customer_id'])
+            next_users = set(orders[orders['month'] == m_next]['customer_id'])
             retained = len(curr_users.intersection(next_users))
             ret_rate = round((retained / len(curr_users) * 100.0), 2) if len(curr_users) > 0 else 0.0
             trend.append({
@@ -729,15 +803,15 @@ class AnalyticsEngine:
 
         # Return rate calculation
         returns_count = len(self.returns_df)
-        total_order_items = len(self.order_items_df)
+        total_order_items = len(self.master_items_df)
         avg_return_rate = float(returns_count / total_order_items) if total_order_items > 0 else 0.05
 
         # Best sellers
         if not items.empty:
-            best_selling_row = items.groupby(['product_name'])['quantity'].sum().reset_index().sort_values(by='quantity', ascending=False).iloc[0]
+            best_selling_row = items.groupby(['product_name'], observed=True)['quantity'].sum().reset_index().sort_values(by='quantity', ascending=False).iloc[0]
             best_selling_name = str(best_selling_row['product_name'])
             
-            most_prof_row = items.groupby(['product_name'])['item_profit'].sum().reset_index().sort_values(by='item_profit', ascending=False).iloc[0]
+            most_prof_row = items.groupby(['product_name'], observed=True)['item_profit'].sum().reset_index().sort_values(by='item_profit', ascending=False).iloc[0]
             most_prof_name = str(most_prof_row['product_name'])
         else:
             best_selling_name = "N/A"
@@ -770,13 +844,13 @@ class AnalyticsEngine:
             return {"category_performance": [], "top_by_revenue": [], "top_by_profit": [], "scatter_data": [], "matrix": {}}
 
         # Group by product
-        prod_agg = items.groupby(['product_id', 'product_name', 'category', 'brand']).agg(
+        prod_agg = items.groupby(['product_id', 'product_name', 'category', 'brand'], observed=True).agg(
             units_sold=('quantity', 'sum'),
             revenue=('item_revenue', 'sum'),
-            cost=('item_cost', 'sum'),
             profit=('item_profit', 'sum')
         ).reset_index()
 
+        prod_agg['cost'] = prod_agg['revenue'] - prod_agg['profit']
         prod_agg['margin'] = (prod_agg['profit'] / prod_agg['revenue'].replace(0, np.nan)).fillna(0.0)
 
         # Merge returns
@@ -792,7 +866,7 @@ class AnalyticsEngine:
         top_prof = prod_agg.sort_values(by='profit', ascending=False).head(10)
 
         # Category performance
-        cat_perf = items.groupby('category').agg(
+        cat_perf = items.groupby('category', observed=True).agg(
             units_sold=('quantity', 'sum'),
             revenue=('item_revenue', 'sum'),
             profit=('item_profit', 'sum')
@@ -1048,22 +1122,25 @@ class AnalyticsEngine:
         }
 
     def get_cohort_analysis(self) -> Dict[str, Any]:
+        if self._cached_cohorts is not None:
+            return self._cached_cohorts
+
         # First purchase cohort analysis
-        orders = self.orders_df[self.orders_df['order_status'] != 'Cancelled'].copy()
+        orders = self.orders_df[self.orders_df['order_status'] != 'Cancelled']
         
         # Determine first purchase date per customer
         first_purchase = orders.groupby('customer_id')['order_date'].min().reset_index()
         first_purchase.columns = ['customer_id', 'first_order_date']
         first_purchase['cohort_month'] = first_purchase['first_order_date'].dt.to_period('M')
         
-        orders = orders.merge(first_purchase[['customer_id', 'cohort_month']], on='customer_id', how='inner')
-        orders['order_month'] = orders['order_date'].dt.to_period('M')
+        orders_merged = orders[['customer_id', 'order_date']].merge(first_purchase[['customer_id', 'cohort_month']], on='customer_id', how='inner')
+        orders_merged['order_month'] = orders_merged['order_date'].dt.to_period('M')
         
         # Calculate month offset
-        orders['cohort_index'] = (orders['order_month'].dt.year - orders['cohort_month'].dt.year) * 12 + \
-                                 (orders['order_month'].dt.month - orders['cohort_month'].dt.month)
+        orders_merged['cohort_index'] = (orders_merged['order_month'].dt.year - orders_merged['cohort_month'].dt.year) * 12 + \
+                                        (orders_merged['order_month'].dt.month - orders_merged['cohort_month'].dt.month)
 
-        cohort_data = orders.groupby(['cohort_month', 'cohort_index'])['customer_id'].nunique().reset_index()
+        cohort_data = orders_merged.groupby(['cohort_month', 'cohort_index'])['customer_id'].nunique().reset_index()
         cohort_pivot = cohort_data.pivot(index='cohort_month', columns='cohort_index', values='customer_id')
 
         # Cohort sizes (Month 0)
@@ -1098,12 +1175,16 @@ class AnalyticsEngine:
                 "retention": row_retention
             })
 
-        return {
+        self._cached_cohorts = {
             "max_months": 12,
             "cohorts": result_rows
         }
+        return self._cached_cohorts
 
     def get_marketing_analytics(self) -> Dict[str, Any]:
+        if self._cached_marketing is not None:
+            return self._cached_marketing
+
         perf = self.marketing_perf_df.merge(self.marketing_campaigns_df, on='campaign_id', how='left')
 
         total_spend = float(perf['spend'].sum())
@@ -1180,7 +1261,7 @@ class AnalyticsEngine:
         highest_cac_chan = channel_df.sort_values(by='cac', ascending=False).iloc[0]
         highest_rev_chan = channel_df.sort_values(by='revenue', ascending=False).iloc[0]
 
-        return {
+        self._cached_marketing = {
             "kpis": {
                 "total_spend": total_spend,
                 "total_revenue": total_revenue,
@@ -1204,6 +1285,7 @@ class AnalyticsEngine:
                 "highest_revenue": float(highest_rev_chan['revenue'])
             }
         }
+        return self._cached_marketing
 
     def get_business_insights(
         self,
