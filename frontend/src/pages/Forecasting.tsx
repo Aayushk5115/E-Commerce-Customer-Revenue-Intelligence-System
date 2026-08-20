@@ -20,6 +20,7 @@ import {
 import { useParams } from 'react-router-dom';
 import { useCurrency } from '../context/CurrencyContext';
 import { KpiCard } from '../components/common/KpiCard';
+import { EmptyDatasetState } from '../components/common/EmptyDatasetState';
 import { fetchForecast } from '../services/api';
 import type { ForecastResponse } from '../types';
 
@@ -53,6 +54,10 @@ export const Forecasting: React.FC<ForecastingProps> = ({ companyId: propCompany
       isMounted = false;
     };
   }, [activeCompanyId, horizon]);
+
+  if (forecastData && (!forecastData.combined || forecastData.combined.length === 0 || (forecastData as any).has_dataset === false)) {
+    return <EmptyDatasetState companyId={activeCompanyId} />;
+  }
 
   return (
     <div className="space-y-6">

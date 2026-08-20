@@ -88,6 +88,74 @@ export const createCompanyWithDataset = async (
   return res.data;
 };
 
+export const createCompanyProfile = async (
+  companyData: Partial<CompanyMetadata>
+): Promise<{ status: string; message: string; company: CompanyMetadata }> => {
+  const res = await api.post<{ status: string; message: string; company: CompanyMetadata }>(
+    '/companies',
+    companyData
+  );
+  return res.data;
+};
+
+export const uploadCompanyDataset = async (
+  companyId: string,
+  file: File,
+  columnMapping?: Record<string, string>
+): Promise<{ status: string; message: string; company: CompanyMetadata; profile: any }> => {
+  const formData = new FormData();
+  formData.append('file', file);
+  if (columnMapping) {
+    formData.append('column_mapping', json_stringify_clean(columnMapping));
+  }
+  const res = await api.post<{ status: string; message: string; company: CompanyMetadata; profile: any }>(
+    `/companies/${companyId}/dataset/upload`,
+    formData,
+    {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }
+  );
+  return res.data;
+};
+
+const json_stringify_clean = (obj: any) => JSON.stringify(obj);
+
+export const fetchDatasetStatus = async (companyId: string): Promise<any> => {
+  const res = await api.get(`/companies/${companyId}/dataset/status`);
+  return res.data;
+};
+
+export const fetchDatasetProfile = async (companyId: string): Promise<any> => {
+  const res = await api.get(`/companies/${companyId}/dataset/profile`);
+  return res.data;
+};
+
+export const fetchDatasetPreview = async (companyId: string): Promise<any> => {
+  const res = await api.get(`/companies/${companyId}/dataset/preview`);
+  return res.data;
+};
+
+export const fetchRawDataset = async (
+  companyId: string,
+  page: number = 1,
+  limit: number = 100,
+  search: string = ''
+): Promise<any> => {
+  const res = await api.get(`/companies/${companyId}/dataset`, {
+    params: { page, limit, search },
+  });
+  return res.data;
+};
+
+export const deleteCompanyDataset = async (
+  companyId: string
+): Promise<{ status: string; message: string; company: CompanyMetadata }> => {
+  const res = await api.delete<{ status: string; message: string; company: CompanyMetadata }>(
+    `/companies/${companyId}/dataset`
+  );
+  return res.data;
+};
+
 // ==========================================
 // 2. COMPANY REGISTRY & DISCOVERY
 // ==========================================

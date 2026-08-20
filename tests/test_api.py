@@ -262,3 +262,72 @@ def test_get_insights():
     assert len(data) >= 2
     assert "title" in data[0]
     assert "recommendation" in data[0]
+
+def test_dataset_management_lifecycle():
+    import shutil, os, json
+    from backend.analytics_engine import manager
+
+    # 1. Create company profile
+    create_res = client.post("/api/companies", json={
+        "company_name": "Lifecycle Demo Corp",
+        "company_slug": "lifecycle-demo",
+        "industry": "Consumer Retail",
+        "base_currency": "INR"
+    })
+    assert create_res.status_code == 200
+    assert create_res.json()["company"]["dataset_status"] == "NO_DATASET"
+
+    # 2. Check status is NO_DATASET
+    status_res = client.get("/api/companies/lifecycle-demo/dataset/status")
+    assert status_res.status_code == 200
+    assert status_res.json()["dataset_status"] == "NO_DATASET"
+
+    # 3. Upload dataset
+    csv_bytes = b"order_id,customer_id,order_date,product_name,category,quantity,total_amount\n201,U1,2026-01-10,Desk Lamp,Home,1,45.00\n202,U2,2026-01-11,Chair,Furniture,2,150.00\n"
+    up_res = client.post(
+        "/api/companies/lifecycle-demo/dataset/upload",
+        files={"file": ("home_sales.csv", csv_bytes, "text/csv")}
+    )
+    assert up_res.status_code == 200
+    assert up_res.json()["company"]["dataset_status"] == "READY"
+    assert up_res.json()["company"]["total_orders"] == 2
+
+    # 4. View paginated dataset
+    page_res = client.get("/api/companies/lifecycle-demo/dataset?page=1&limit=10")
+    assert page_res.status_code == 200
+    pdata = page_res.json()
+    assert pdata["total_records"] == 2
+    assert len(pdata["rows"]) == 2
+
+    # 5. Check dataset profile
+    prof_res = client.get("/api/companies/lifecycle-demo/dataset/profile")
+    assert prof_res.status_code == 200
+    assert prof_res.json()["total_orders"] == 2
+
+    # 6. Verify No-Fake-Profit: since no cost was in csv, has_cost_data is false
+    kpi_res = client.get("/api/companies/lifecycle-demo/kpis")
+    assert kpi_res.status_code == 200
+    assert kpi_res.json()["has_profit_data"] is False
+    assert kpi_res.json()["total_profit"] is None
+
+    # 7. Delete dataset
+    del_res = client.delete("/api/companies/lifecycle-demo/dataset")
+    assert del_res.status_code == 200
+    assert del_res.json()["company"]["dataset_status"] == "NO_DATASET"
+
+    # 8. Verify dashboard clears analytics
+    kpi_after = client.get("/api/companies/lifecycle-demo/kpis")
+    assert kpi_after.status_code == 200
+    assert kpi_after.json()["has_dataset"] is False
+    assert kpi_after.json()["total_orders"] == 0
+
+    # Cleanup company
+    if "lifecycle-demo" in manager.companies_meta:
+        del manager.companies_meta["lifecycle-demo"]
+        if "lifecycle-demo" in manager.engines:
+            del manager.engines["lifecycle-demo"]
+        with open(manager.companies_file, "w", encoding="utf-8") as f:
+            json.dump(list(manager.companies_meta.values()), f, indent=2)
+    test_dir = os.path.join(manager.companies_data_dir, "lifecycle-demo")
+    if os.path.exists(test_dir):
+        shutil.rmtree(test_dir, ignore_errors=True)

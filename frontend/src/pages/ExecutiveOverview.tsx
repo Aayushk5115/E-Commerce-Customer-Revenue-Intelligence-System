@@ -25,6 +25,7 @@ import {
 } from 'recharts';
 import { KpiCard } from '../components/common/KpiCard';
 import { GlobalFilterBar } from '../components/common/GlobalFilterBar';
+import { EmptyDatasetState } from '../components/common/EmptyDatasetState';
 import { useParams } from 'react-router-dom';
 import { useCurrency } from '../context/CurrencyContext';
 import {
@@ -104,6 +105,12 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
 
   const CATEGORY_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
 
+  if (kpis && (!kpis.total_orders || (kpis as any).has_dataset === false)) {
+    return <EmptyDatasetState companyId={activeCompanyId} />;
+  }
+
+  const hasProfit = (kpis as any)?.has_profit_data !== false && kpis?.total_profit !== null && kpis?.total_profit !== undefined;
+
   return (
     <div className="space-y-6">
       {/* Global Dimension Filters */}
@@ -127,21 +134,21 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
 
         <KpiCard
           title="Total Net Profit"
-          value={kpis ? formatCurrency(kpis.total_profit, { compact: true }) : '—'}
-          changePct={kpis?.profit_change_pct}
-          prevValue={kpis ? formatCurrency(kpis.prev_profit, { compact: true }) : undefined}
+          value={hasProfit && kpis?.total_profit !== null && kpis?.total_profit !== undefined ? formatCurrency(kpis.total_profit, { compact: true }) : (!hasProfit ? 'Unavailable' : '—')}
+          changePct={hasProfit ? kpis?.profit_change_pct : undefined}
+          prevValue={hasProfit && kpis ? formatCurrency(kpis.prev_profit, { compact: true }) : undefined}
           icon={<TrendingUp size={18} />}
-          tooltip="Item revenue minus cost of goods sold (COGS)."
+          tooltip={hasProfit ? "Item revenue minus cost of goods sold (COGS)." : "Profit analysis unavailable because cost data is not provided in dataset."}
         />
 
         <KpiCard
           title="Blended Gross Margin"
-          value={kpis ? (kpis.profit_margin * 100).toFixed(1) : '—'}
-          suffix="%"
-          changePct={kpis?.margin_change_pct}
-          prevValue={kpis ? (kpis.prev_profit_margin * 100).toFixed(1) : undefined}
+          value={hasProfit && kpis?.profit_margin !== null && kpis?.profit_margin !== undefined ? (kpis.profit_margin * 100).toFixed(1) : (!hasProfit ? 'Unavailable' : '—')}
+          suffix={hasProfit ? "%" : ""}
+          changePct={hasProfit ? kpis?.margin_change_pct : undefined}
+          prevValue={hasProfit && kpis && kpis.prev_profit_margin !== null && kpis.prev_profit_margin !== undefined ? (kpis.prev_profit_margin * 100).toFixed(1) : undefined}
           icon={<Percent size={18} />}
-          tooltip="Net profit as a percentage of total revenue."
+          tooltip={hasProfit ? "Net profit as a percentage of total revenue." : "Margin analysis unavailable without cost data."}
         />
 
         <KpiCard

@@ -26,6 +26,7 @@ import { KpiCard } from '../components/common/KpiCard';
 import { DataTable } from '../components/common/DataTable';
 import type { ColumnDef } from '../components/common/DataTable';
 import { PerformanceMatrix } from '../components/common/PerformanceMatrix';
+import { EmptyDatasetState } from '../components/common/EmptyDatasetState';
 import { useParams } from 'react-router-dom';
 import { useCurrency } from '../context/CurrencyContext';
 import {
@@ -245,6 +246,12 @@ export const ProductIntelligence: React.FC<ProductIntelligenceProps> = ({
     },
   ];
 
+  if (kpis && (!kpis.total_products || (kpis as any).has_dataset === false)) {
+    return <EmptyDatasetState companyId={activeCompanyId} />;
+  }
+
+  const hasProfit = (kpis as any)?.has_profit_data !== false && kpis?.profit !== null && kpis?.profit !== undefined;
+
   return (
     <div className="space-y-6">
       {/* 8 Product Intelligence KPI Cards */}
@@ -273,17 +280,17 @@ export const ProductIntelligence: React.FC<ProductIntelligenceProps> = ({
 
         <KpiCard
           title="Product Net Profit"
-          value={kpis ? formatCurrency(kpis.profit, { compact: true }) : '—'}
+          value={hasProfit && kpis ? formatCurrency(kpis.profit, { compact: true }) : (!hasProfit ? 'Unavailable' : '—')}
           icon={<TrendingUp size={18} />}
-          tooltip="Merchandise gross profit generated across all items."
+          tooltip={hasProfit ? "Merchandise gross profit generated across all items." : "Profit analysis unavailable because cost data is not provided in dataset."}
         />
 
         <KpiCard
           title="Average SKU Margin"
-          value={kpis ? (kpis.avg_margin * 100).toFixed(1) : '—'}
-          suffix="%"
+          value={hasProfit && kpis ? (kpis.avg_margin * 100).toFixed(1) : (!hasProfit ? 'Unavailable' : '—')}
+          suffix={hasProfit ? "%" : ""}
           icon={<Percent size={18} />}
-          tooltip="Average profit margin realized across product sales."
+          tooltip={hasProfit ? "Average profit margin realized across product sales." : "Margin analysis unavailable without cost data."}
         />
 
         <KpiCard

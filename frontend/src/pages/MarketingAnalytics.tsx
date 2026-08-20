@@ -24,6 +24,7 @@ import {
 import { KpiCard } from '../components/common/KpiCard';
 import { DataTable } from '../components/common/DataTable';
 import type { ColumnDef } from '../components/common/DataTable';
+import { EmptyDatasetState } from '../components/common/EmptyDatasetState';
 import { useParams } from 'react-router-dom';
 import { useCurrency } from '../context/CurrencyContext';
 import { fetchMarketing } from '../services/api';
@@ -177,6 +178,10 @@ export const MarketingAnalytics: React.FC<MarketingAnalyticsProps> = ({ companyI
   ];
 
   const CHANNEL_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
+
+  if (data && (!data.kpis?.total_revenue && !data.kpis?.total_spend || (data as any).has_dataset === false)) {
+    return <EmptyDatasetState companyId={activeCompanyId} />;
+  }
 
   return (
     <div className="space-y-6">

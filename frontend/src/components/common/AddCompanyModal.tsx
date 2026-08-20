@@ -15,32 +15,34 @@ import {
   Layers,
   Coins,
 } from 'lucide-react';
-import { previewDatasetFile, createCompanyWithDataset } from '../../services/api';
+import { previewDatasetFile, createCompanyWithDataset, uploadCompanyDataset } from '../../services/api';
 import type { DatasetPreviewResponse, CompanyMetadata } from '../../types';
 
 interface AddCompanyModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCompanyCreated: (company: CompanyMetadata) => void;
+  targetCompany?: CompanyMetadata | null;
 }
 
 export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({
   isOpen,
   onClose,
   onCompanyCreated,
+  targetCompany,
 }) => {
   const navigate = useNavigate();
 
   // Wizard Steps: 1 = Profile, 2 = Upload, 3 = Preview & Mapping, 4 = Ingestion/Success
-  const [step, setStep] = useState<number>(1);
+  const [step, setStep] = useState<number>(targetCompany ? 2 : 1);
 
   // Step 1: Company Profile Form
-  const [companyName, setCompanyName] = useState<string>('');
-  const [companySlug, setCompanySlug] = useState<string>('');
-  const [industry, setIndustry] = useState<string>('E-Commerce');
-  const [baseCurrency, setBaseCurrency] = useState<'INR' | 'USD'>('INR');
-  const [logoBadge, setLogoBadge] = useState<string>('🏢');
-  const [description, setDescription] = useState<string>('');
+  const [companyName, setCompanyName] = useState<string>(targetCompany?.company_name || '');
+  const [companySlug, setCompanySlug] = useState<string>(targetCompany?.company_slug || '');
+  const [industry, setIndustry] = useState<string>(targetCompany?.industry || 'E-Commerce');
+  const [baseCurrency, setBaseCurrency] = useState<'INR' | 'USD'>(targetCompany?.base_currency || 'INR');
+  const [logoBadge, setLogoBadge] = useState<string>(targetCompany?.logo_badge || '🏢');
+  const [description, setDescription] = useState<string>(targetCompany?.description || '');
 
   // Step 2: File Upload
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -105,27 +107,35 @@ export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({
     setStep(4);
     setIngestionProgress('Uploading and parsing dataset...');
 
-    const formData = new FormData();
-    formData.append('file', selectedFile);
-    formData.append('company_name', companyName.trim() || 'Custom Enterprise');
-    formData.append('company_slug', companySlug.trim() || 'custom-company');
-    formData.append('industry', industry);
-    formData.append('description', description.trim() || `Enterprise analytics dataset for ${companyName}.`);
-    formData.append('base_currency', baseCurrency);
-    formData.append('logo_badge', logoBadge);
-    formData.append('brand_color', '#3b82f6');
-    formData.append('column_mapping', JSON.stringify(columnMapping));
-
     try {
       setTimeout(() => setIngestionProgress('Validating transactions & normalizing schema...'), 600);
-      setTimeout(() => setIngestionProgress('Computing RFM clusters & ML churn risk scores...'), 1400);
-      setTimeout(() => setIngestionProgress('Generating ARIMA forecast models & registering catalog...'), 2200);
+      setTimeout(() => setIngestionProgress('Computing RFM clusters & customer lifetime values...'), 1400);
+      setTimeout(() => setIngestionProgress('Generating ARIMA models & updating dashboard...'), 2200);
 
-      const res = await createCompanyWithDataset(formData);
-      setCreatedCompany(res.company);
-      onCompanyCreated(res.company);
+      let resCompany: CompanyMetadata;
+      if (targetCompany) {
+        const res = await uploadCompanyDataset(targetCompany.company_id, selectedFile, columnMapping);
+        resCompany = res.company;
+      } else {
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        formData.append('company_name', companyName.trim() || 'Custom Enterprise');
+        formData.append('company_slug', companySlug.trim() || 'custom-company');
+        formData.append('industry', industry);
+        formData.append('description', description.trim() || `Enterprise analytics dataset for ${companyName}.`);
+        formData.append('base_currency', baseCurrency);
+        formData.append('logo_badge', logoBadge);
+        formData.append('brand_color', '#3b82f6');
+        formData.append('column_mapping', JSON.stringify(columnMapping));
+
+        const res = await createCompanyWithDataset(formData);
+        resCompany = res.company;
+      }
+
+      setCreatedCompany(resCompany);
+      onCompanyCreated(resCompany);
     } catch (err: any) {
-      console.error('Company creation error:', err);
+      console.error('Company creation / upload error:', err);
       setUploadError(err.response?.data?.detail || 'Failed to import dataset. Please check column mappings.');
       setStep(3);
     } finally {

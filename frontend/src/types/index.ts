@@ -65,6 +65,50 @@ export interface DatasetPreviewResponse {
   preview_rows: Record<string, any>[];
 }
 
+export type DatasetStatus = 'NO_DATASET' | 'UPLOADING' | 'PROCESSING' | 'READY' | 'FAILED' | 'REMOVING';
+
+export interface DatasetStatusResponse {
+  company_id: string;
+  company_name?: string;
+  dataset_status: DatasetStatus | string;
+  dataset_file?: string | null;
+  total_revenue: number;
+  total_orders: number;
+  total_customers: number;
+  data_quality_score: number;
+  has_profit_data: boolean;
+  has_forecast_data: boolean;
+  base_currency: 'INR' | 'USD';
+  uploaded_at?: string | null;
+}
+
+export interface DatasetProfileResponse {
+  original_filename?: string | null;
+  rows_received: number;
+  rows_cleaned: number;
+  rows_rejected: number;
+  total_revenue: number;
+  total_orders: number;
+  total_customers: number;
+  total_products: number;
+  has_cost_data: boolean;
+  has_forecast_data: boolean;
+  data_quality_score: number;
+  date_range: string;
+  supported_analytics: string[];
+  unsupported_analytics: string[];
+  uploaded_at?: string;
+}
+
+export interface PaginatedDatasetResponse {
+  total_records: number;
+  page: number;
+  limit: number;
+  total_pages: number;
+  columns: string[];
+  rows: Record<string, any>[];
+}
+
 export interface FilterOptions {
   min_date: string;
   max_date: string;

@@ -1,8 +1,12 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Menu, RefreshCw, Filter, Clock, ArrowLeft } from 'lucide-react';
+import { Menu, RefreshCw, Filter, Clock, ArrowLeft, Table, Trash2, UploadCloud, Database } from 'lucide-react';
 import { CompanySwitcher } from '../common/CompanySwitcher';
 import { CurrencySelector } from '../common/CurrencySelector';
+import { ViewDatasetModal } from '../common/ViewDatasetModal';
+import { RemoveDatasetDialog } from '../common/RemoveDatasetDialog';
+import { AddCompanyModal } from '../common/AddCompanyModal';
+import { fetchCompanyDetail } from '../../services/api';
 import type { FilterState, CompanyMetadata } from '../../types';
 
 interface HeaderProps {
@@ -29,6 +33,29 @@ export const Header: React.FC<HeaderProps> = ({
   onCompanyChange,
 }) => {
   const navigate = useNavigate();
+  const [currentCompany, setCurrentCompany] = useState<CompanyMetadata | null>(null);
+  const [isViewDatasetOpen, setIsViewDatasetOpen] = useState<boolean>(false);
+  const [isRemoveDatasetOpen, setIsRemoveDatasetOpen] = useState<boolean>(false);
+  const [isUploadDatasetOpen, setIsUploadDatasetOpen] = useState<boolean>(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadMeta = async () => {
+      if (!currentCompanyId) return;
+      try {
+        const meta = await fetchCompanyDetail(currentCompanyId);
+        if (isMounted) setCurrentCompany(meta);
+      } catch (err) {
+        console.error('Error fetching company header meta:', err);
+      }
+    };
+    loadMeta();
+    return () => {
+      isMounted = false;
+    };
+  }, [currentCompanyId, lastUpdated]);
+
+  const hasDataset = currentCompany?.dataset_status !== 'NO_DATASET' && (currentCompany?.total_orders || 0) > 0;
 
   // Count active non-default filters
   const activeFilterCount = [
@@ -105,6 +132,36 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           )}
 
+          {/* Dataset Action Buttons */}
+          {hasDataset ? (
+            <div className="flex items-center space-x-1.5">
+              <button
+                onClick={() => setIsViewDatasetOpen(true)}
+                className="flex items-center space-x-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
+                title="View original paginated dataset"
+              >
+                <Table size={13} className="text-blue-500" />
+                <span className="hidden sm:inline">View Dataset</span>
+              </button>
+              <button
+                onClick={() => setIsRemoveDatasetOpen(true)}
+                className="p-1.5 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-transparent hover:border-rose-200 dark:hover:border-rose-900 transition-colors cursor-pointer"
+                title="Remove dataset"
+              >
+                <Trash2 size={15} />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setIsUploadDatasetOpen(true)}
+              className="flex items-center space-x-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-colors cursor-pointer"
+              title="Upload dataset for this company"
+            >
+              <UploadCloud size={14} />
+              <span>Upload Dataset</span>
+            </button>
+          )}
+
           {/* Currency Selector (₹ INR / $ USD) */}
           <CurrencySelector />
 
@@ -128,6 +185,43 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         </div>
       </div>
+
+      {/* View Dataset Modal */}
+      {currentCompany && (
+        <ViewDatasetModal
+          isOpen={isViewDatasetOpen}
+          onClose={() => setIsViewDatasetOpen(false)}
+          company={currentCompany}
+        />
+      )}
+
+      {/* Remove Dataset Confirmation Dialog */}
+      {currentCompany && (
+        <RemoveDatasetDialog
+          isOpen={isRemoveDatasetOpen}
+          onClose={() => setIsRemoveDatasetOpen(false)}
+          company={currentCompany}
+          onDatasetRemoved={(updated) => {
+            setCurrentCompany(updated);
+            if (onCompanyChange) onCompanyChange(updated);
+            onRefresh();
+          }}
+        />
+      )}
+
+      {/* Upload Dataset Modal */}
+      {currentCompany && (
+        <AddCompanyModal
+          isOpen={isUploadDatasetOpen}
+          onClose={() => setIsUploadDatasetOpen(false)}
+          targetCompany={currentCompany}
+          onCompanyCreated={(updated) => {
+            setCurrentCompany(updated);
+            if (onCompanyChange) onCompanyChange(updated);
+            onRefresh();
+          }}
+        />
+      )}
     </header>
   );
 };

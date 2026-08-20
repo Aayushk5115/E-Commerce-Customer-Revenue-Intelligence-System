@@ -150,7 +150,7 @@ async def create_company_with_dataset(
             "brand_color": brand_color or "#3b82f6"
         }
 
-        created_meta = manager.add_company(company_info, df, mapping)
+        created_meta = manager.add_company(company_info, df, mapping, filename=file.filename)
         return {
             "status": "success",
             "message": f"Company '{company_name}' successfully created and dataset ingested.",
@@ -158,6 +158,105 @@ async def create_company_with_dataset(
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to create company with dataset: {str(e)}")
+
+@app.post("/api/companies")
+def create_company_profile(payload: Dict[str, Any]):
+    """Creates a new company profile without initial dataset (ready for upload)."""
+    try:
+        created_meta = manager.add_company(payload)
+        return {
+            "status": "success",
+            "message": f"Company '{payload.get('company_name', 'New Company')}' registered successfully.",
+            "company": created_meta
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to create company: {str(e)}")
+
+# ==========================================
+# 2B. DATASET LIFECYCLE & MANAGEMENT
+# ==========================================
+@app.post("/api/companies/{company_id}/dataset/upload")
+async def upload_company_dataset(
+    company_id: str = Path(...),
+    file: UploadFile = File(...),
+    column_mapping: Optional[str] = Form(None)
+):
+    """Uploads and normalizes a dataset for an existing company."""
+    try:
+        contents = await file.read()
+        if len(contents) == 0:
+            raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+
+        mapping = None
+        if column_mapping:
+            try:
+                mapping = json.loads(column_mapping)
+            except Exception:
+                mapping = None
+
+        res = manager.upload_company_dataset(
+            company_id=company_id,
+            file_bytes=contents,
+            filename=file.filename,
+            mapping=mapping
+        )
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to upload dataset: {str(e)}")
+
+@app.get("/api/companies/{company_id}/dataset/status")
+def get_dataset_status(company_id: str = Path(...)):
+    """Returns current dataset status, metrics, and quality for a company."""
+    meta = manager.get_company_meta(company_id)
+    if not meta:
+        raise HTTPException(status_code=404, detail=f"Company '{company_id}' not found.")
+    
+    eng = manager.get_engine(company_id)
+    return {
+        "company_id": meta["company_id"],
+        "company_name": meta.get("company_name"),
+        "dataset_status": meta.get("dataset_status", "NO_DATASET"),
+        "dataset_file": meta.get("dataset_file"),
+        "total_revenue": meta.get("total_revenue", 0.0),
+        "total_orders": meta.get("total_orders", 0),
+        "total_customers": meta.get("total_customers", 0),
+        "data_quality_score": meta.get("data_quality_score", 0),
+        "has_profit_data": eng.has_profit_data,
+        "has_forecast_data": eng.has_forecast_data,
+        "base_currency": meta.get("base_currency", "INR"),
+        "uploaded_at": meta.get("uploaded_at")
+    }
+
+@app.get("/api/companies/{company_id}/dataset/profile")
+def get_dataset_profile(company_id: str = Path(...)):
+    """Returns full dataset profile report for a company."""
+    eng = manager.get_engine(company_id)
+    return eng.get_dataset_profile()
+
+@app.get("/api/companies/{company_id}/dataset/preview")
+def get_dataset_preview(company_id: str = Path(...)):
+    """Returns top 20 rows of the company dataset."""
+    eng = manager.get_engine(company_id)
+    return eng.get_raw_dataset(page=1, limit=20)
+
+@app.get("/api/companies/{company_id}/dataset")
+def get_paginated_dataset(
+    company_id: str = Path(...),
+    page: int = Query(1, ge=1),
+    limit: int = Query(100, ge=1, le=500),
+    search: str = Query("")
+):
+    """Returns server-side paginated raw dataset rows with PII masking."""
+    eng = manager.get_engine(company_id)
+    return eng.get_raw_dataset(page=page, limit=limit, search=search)
+
+@app.delete("/api/companies/{company_id}/dataset")
+def delete_company_dataset(company_id: str = Path(...)):
+    """Deletes dataset files, clears analytics cache, and resets status to NO_DATASET."""
+    try:
+        return manager.remove_company_dataset(company_id)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to remove dataset: {str(e)}")
 
 # ==========================================
 # 3. COMPANY DISCOVERY & REGISTRY

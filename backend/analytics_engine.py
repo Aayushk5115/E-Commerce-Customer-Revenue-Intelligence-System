@@ -261,6 +261,110 @@ class CompanyAnalyticsEngine:
         self._cached_clv = None
         self._cached_forecast_6 = None
 
+        # Dataset availability flags
+        self.has_dataset = bool(not self.orders_df.empty and len(self.orders_df) > 0)
+        self.has_profit_data = bool(
+            not self.master_items_df.empty and
+            'item_cost' in self.master_items_df.columns and
+            self.master_items_df['item_cost'].notnull().any() and
+            (self.master_items_df['item_cost'] > 0).any()
+        )
+        self.has_forecast_data = bool(not self.forecast_df.empty and len(self.forecast_df) > 0)
+        self.has_churn_data = bool(not self.churn_df.empty and len(self.churn_df) > 0)
+        self.has_marketing_data = bool(not self.marketing_perf_df.empty and len(self.marketing_perf_df) > 0)
+
+    def get_raw_dataset(self, page: int = 1, limit: int = 100, search: str = "") -> Dict[str, Any]:
+        """Server-side paginated raw dataset reader with PII masking."""
+        raw_path = os.path.join(self.data_dir, "raw_dataset.csv")
+        if not os.path.exists(raw_path):
+            raw_path = os.path.join(self.data_dir, "orders.csv")
+
+        if not os.path.exists(raw_path):
+            return {
+                "total_records": 0,
+                "page": page,
+                "limit": limit,
+                "total_pages": 0,
+                "columns": [],
+                "rows": []
+            }
+
+        try:
+            df = pd.read_csv(raw_path)
+        except Exception:
+            return {
+                "total_records": 0,
+                "page": page,
+                "limit": limit,
+                "total_pages": 0,
+                "columns": [],
+                "rows": []
+            }
+
+        if search:
+            s = search.lower().strip()
+            mask = df.astype(str).apply(lambda row: row.str.lower().str.contains(s, regex=False).any(), axis=1)
+            df = df[mask]
+
+        total_records = len(df)
+        total_pages = max(1, (total_records + limit - 1) // limit) if total_records > 0 else 0
+        page = max(1, min(page, total_pages)) if total_pages > 0 else 1
+        start_idx = (page - 1) * limit
+        end_idx = start_idx + limit
+        page_df = df.iloc[start_idx:end_idx].copy().fillna("")
+
+        # Mask PII in preview
+        for col in page_df.columns:
+            c_lower = str(col).lower()
+            if "email" in c_lower:
+                page_df[col] = page_df[col].apply(mask_email)
+            elif "name" in c_lower and "product" not in c_lower and "company" not in c_lower and "brand" not in c_lower:
+                page_df[col] = page_df[col].apply(lambda x: mask_name(x, ""))
+
+        return {
+            "total_records": total_records,
+            "page": page,
+            "limit": limit,
+            "total_pages": total_pages,
+            "columns": [str(c) for c in df.columns],
+            "rows": page_df.to_dict(orient="records")
+        }
+
+    def get_dataset_profile(self) -> Dict[str, Any]:
+        """Returns comprehensive data profiling metrics for the company dataset."""
+        prof_path = os.path.join(self.data_dir, "dataset_profile.json")
+        if os.path.exists(prof_path):
+            try:
+                with open(prof_path, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception:
+                pass
+
+        # Fallback profile calculation
+        date_range_str = "N/A"
+        if not self.orders_df.empty and self.orders_df['order_date'].notnull().any():
+            min_d = self.orders_df['order_date'].min().strftime('%b %Y')
+            max_d = self.orders_df['order_date'].max().strftime('%b %Y')
+            date_range_str = f"{min_d} – {max_d}" if min_d != max_d else min_d
+
+        return {
+            "original_filename": "dataset.csv" if self.has_dataset else None,
+            "rows_received": len(self.orders_df),
+            "rows_cleaned": len(self.orders_df),
+            "rows_rejected": 0,
+            "total_revenue": float(self.orders_df['total_amount'].sum()) if self.has_dataset else 0.0,
+            "total_orders": len(self.orders_df),
+            "total_customers": len(self.customers_df),
+            "total_products": len(self.products_df),
+            "has_cost_data": self.has_profit_data,
+            "has_forecast_data": self.has_forecast_data,
+            "data_quality_score": 95 if self.has_dataset else 0,
+            "date_range": date_range_str,
+            "supported_analytics": ["Revenue & Executive Overview", "Customer Intelligence & RFM", "Product Intelligence"] if self.has_dataset else [],
+            "unsupported_analytics": ([] if self.has_profit_data else ["Profit & Gross Margin Analytics (Cost data not provided)"]) + ([] if self.has_forecast_data else ["Revenue Forecasting (< 3 months data)"]),
+            "uploaded_at": datetime.now().isoformat()
+        }
+
     def get_filter_options(self) -> Dict[str, Any]:
         return self._filter_options_cache
 
@@ -355,27 +459,30 @@ class CompanyAnalyticsEngine:
         revenue_growth = calc_pct_change(curr_rev, prev_rev)
 
         return {
+            "has_dataset": self.has_dataset,
+            "has_profit_data": self.has_profit_data,
+            "has_forecast_data": self.has_forecast_data,
             "total_revenue": curr_rev,
-            "total_profit": curr_profit,
+            "total_profit": curr_profit if self.has_profit_data else None,
             "total_orders": curr_orders,
             "total_customers": curr_cust,
             "aov": curr_aov,
-            "profit_margin": curr_margin,
+            "profit_margin": curr_margin if self.has_profit_data else None,
             "retention_rate": curr_retention,
             "revenue_growth": revenue_growth,
             "prev_revenue": prev_rev,
-            "prev_profit": prev_profit,
+            "prev_profit": prev_profit if self.has_profit_data else None,
             "prev_orders": prev_orders,
             "prev_customers": prev_cust,
             "prev_aov": prev_aov,
-            "prev_profit_margin": prev_margin,
+            "prev_profit_margin": prev_margin if self.has_profit_data else None,
             "prev_retention_rate": prev_retention,
             "revenue_change_pct": revenue_growth,
-            "profit_change_pct": calc_pct_change(curr_profit, prev_profit),
+            "profit_change_pct": calc_pct_change(curr_profit, prev_profit) if self.has_profit_data else None,
             "orders_change_pct": calc_pct_change(curr_orders, prev_orders),
             "customers_change_pct": calc_pct_change(curr_cust, prev_cust),
             "aov_change_pct": calc_pct_change(curr_aov, prev_aov),
-            "margin_change_pct": calc_pct_change(curr_margin, prev_margin),
+            "margin_change_pct": calc_pct_change(curr_margin, prev_margin) if self.has_profit_data else None,
             "retention_change_pct": calc_pct_change(curr_retention, prev_retention)
         }
 
@@ -1533,11 +1640,12 @@ class MultiCompanyAnalyticsManager:
     def add_company(
         self,
         company_info: Dict[str, Any],
-        raw_df: pd.DataFrame,
-        mapping: Dict[str, str]
+        raw_df: Optional[pd.DataFrame] = None,
+        mapping: Optional[Dict[str, str]] = None,
+        filename: str = "dataset.csv"
     ) -> Dict[str, Any]:
         """
-        Creates a new company in the registry, parses & ingests its dataset,
+        Creates a new company in the registry, optionally parses & ingests its dataset,
         and initializes its analytics engine immediately.
         """
         from data_normalizer import ingest_user_dataset
@@ -1561,8 +1669,30 @@ class MultiCompanyAnalyticsManager:
         comp_dir = os.path.join(self.companies_data_dir, company_id)
         os.makedirs(comp_dir, exist_ok=True)
 
-        # Ingest and normalize dataset
-        stats = ingest_user_dataset(company_info, raw_df, mapping, comp_dir)
+        if raw_df is not None and not raw_df.empty:
+            if mapping is None:
+                from data_normalizer import detect_column_mapping
+                mapping = detect_column_mapping(raw_df)
+            stats = ingest_user_dataset(company_info, raw_df, mapping, comp_dir, original_filename=filename)
+            dataset_status = "READY"
+            dataset_file = filename
+            total_rev = stats.get("total_revenue", 0.0)
+            total_ord = stats.get("total_orders", 0)
+            total_cust = stats.get("total_customers", 0)
+            quality_score = stats.get("data_quality_score", 95)
+            has_profit = stats.get("has_cost_data", False)
+            has_forecast = stats.get("has_forecast_data", False)
+            uploaded_at = stats.get("uploaded_at", datetime.now().isoformat())
+        else:
+            dataset_status = "NO_DATASET"
+            dataset_file = None
+            total_rev = 0.0
+            total_ord = 0
+            total_cust = 0
+            quality_score = 0
+            has_profit = False
+            has_forecast = False
+            uploaded_at = None
 
         new_meta = {
             "company_id": company_id,
@@ -1572,14 +1702,19 @@ class MultiCompanyAnalyticsManager:
             "brand_color": brand_color,
             "industry": industry,
             "description": description,
-            "dataset_source": "User Uploaded Dataset",
-            "dataset_status": "Active (Custom)",
+            "dataset_source": "User Uploaded Dataset" if dataset_status == "READY" else "No Dataset",
+            "dataset_status": dataset_status,
+            "dataset_file": dataset_file,
             "is_synthetic": False,
             "base_currency": base_currency,
-            "total_revenue": stats.get("total_revenue", 0.0),
-            "total_orders": stats.get("orders_count", 0),
-            "total_customers": stats.get("customers_count", 0),
-            "supported_modules": ["executive", "customers", "products", "marketing", "forecast", "insights"],
+            "total_revenue": total_rev,
+            "total_orders": total_ord,
+            "total_customers": total_cust,
+            "data_quality_score": quality_score,
+            "has_profit_data": has_profit,
+            "has_forecast_data": has_forecast,
+            "uploaded_at": uploaded_at,
+            "supported_modules": ["executive", "customers", "products", "marketing", "forecast", "insights"] if dataset_status == "READY" else [],
             "created_at": datetime.now().isoformat()
         }
 
@@ -1596,6 +1731,119 @@ class MultiCompanyAnalyticsManager:
         self.engines[company_id] = CompanyAnalyticsEngine(company_id, comp_dir)
 
         return new_meta
+
+    def upload_company_dataset(
+        self,
+        company_id: str,
+        file_bytes: bytes,
+        filename: str,
+        mapping: Optional[Dict[str, str]] = None
+    ) -> Dict[str, Any]:
+        """
+        Parses and ingests an uploaded dataset for an existing company,
+        rebuilding its analytics models and updating registry status.
+        """
+        from data_normalizer import read_dataset_file, detect_column_mapping, ingest_user_dataset
+
+        meta = self.get_company_meta(company_id)
+        if not meta:
+            raise ValueError(f"Company '{company_id}' not found.")
+
+        matched_id = meta["company_id"]
+        comp_dir = os.path.join(self.companies_data_dir, matched_id)
+        os.makedirs(comp_dir, exist_ok=True)
+
+        raw_df = read_dataset_file(file_bytes, filename)
+        if mapping is None:
+            mapping = detect_column_mapping(raw_df)
+
+        stats = ingest_user_dataset(meta, raw_df, mapping, comp_dir, original_filename=filename)
+
+        meta["dataset_status"] = "READY"
+        meta["dataset_file"] = filename
+        meta["dataset_source"] = "User Uploaded Dataset"
+        meta["total_revenue"] = stats.get("total_revenue", 0.0)
+        meta["total_orders"] = stats.get("total_orders", 0)
+        meta["total_customers"] = stats.get("total_customers", 0)
+        meta["data_quality_score"] = stats.get("data_quality_score", 95)
+        meta["has_profit_data"] = stats.get("has_cost_data", False)
+        meta["has_forecast_data"] = stats.get("has_forecast_data", False)
+        meta["uploaded_at"] = stats.get("uploaded_at", datetime.now().isoformat())
+        meta["supported_modules"] = ["executive", "customers", "products", "marketing", "forecast", "insights"]
+
+        self.companies_meta[matched_id] = meta
+
+        try:
+            with open(self.companies_file, "w", encoding="utf-8") as f:
+                json.dump(list(self.companies_meta.values()), f, indent=2)
+        except Exception as e:
+            print(f"[MultiCompanyAnalyticsManager] Error saving companies.json: {e}")
+
+        # Re-initialize engine
+        self.engines[matched_id] = CompanyAnalyticsEngine(matched_id, comp_dir)
+
+        return {
+            "status": "success",
+            "message": f"Dataset for company '{meta.get('company_name', matched_id)}' processed successfully.",
+            "company": meta,
+            "profile": stats
+        }
+
+    def remove_company_dataset(self, company_id: str) -> Dict[str, Any]:
+        """
+        Safely removes the dataset and generated analytics for a company,
+        resetting its status to NO_DATASET while preserving company profile.
+        """
+        import shutil
+
+        meta = self.get_company_meta(company_id)
+        if not meta:
+            raise ValueError(f"Company '{company_id}' not found.")
+
+        matched_id = meta["company_id"]
+        comp_dir = os.path.join(self.companies_data_dir, matched_id)
+
+        # 1. Remove dataset files and ML artifacts from storage
+        if os.path.exists(comp_dir):
+            for fname in ["orders.csv", "order_items.csv", "customers.csv", "products.csv", "returns.csv", "raw_dataset.csv", "dataset_profile.json"]:
+                fpath = os.path.join(comp_dir, fname)
+                if os.path.exists(fpath):
+                    try:
+                        os.remove(fpath)
+                    except Exception:
+                        pass
+            ml_dir = os.path.join(comp_dir, "ml_output")
+            if os.path.exists(ml_dir):
+                shutil.rmtree(ml_dir, ignore_errors=True)
+
+        # 2. Reset company metadata
+        meta["dataset_status"] = "NO_DATASET"
+        meta["dataset_file"] = None
+        meta["dataset_source"] = "No Dataset"
+        meta["total_revenue"] = 0.0
+        meta["total_orders"] = 0
+        meta["total_customers"] = 0
+        meta["data_quality_score"] = 0
+        meta["has_profit_data"] = False
+        meta["has_forecast_data"] = False
+        meta["supported_modules"] = []
+
+        self.companies_meta[matched_id] = meta
+
+        try:
+            with open(self.companies_file, "w", encoding="utf-8") as f:
+                json.dump(list(self.companies_meta.values()), f, indent=2)
+        except Exception as e:
+            print(f"[MultiCompanyAnalyticsManager] Error saving companies.json: {e}")
+
+        # Reset engine to empty
+        self.engines[matched_id] = CompanyAnalyticsEngine(matched_id, comp_dir)
+
+        return {
+            "status": "success",
+            "message": f"Dataset for company '{meta.get('company_name', matched_id)}' removed successfully.",
+            "company": meta
+        }
 
     def get_company_meta(self, company_id: str) -> Optional[Dict[str, Any]]:
         cid = company_id.lower().replace("_", "-")

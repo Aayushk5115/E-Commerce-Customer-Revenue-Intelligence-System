@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { useCurrency } from '../context/CurrencyContext';
+import { EmptyDatasetState } from '../components/common/EmptyDatasetState';
 import { fetchInsights } from '../services/api';
 import type { BusinessInsight, FilterState } from '../types';
 
@@ -87,6 +88,10 @@ export const BusinessInsights: React.FC<BusinessInsightsProps> = ({
         );
     }
   };
+
+  if (insights.length === 0) {
+    return <EmptyDatasetState companyId={activeCompanyId} />;
+  }
 
   return (
     <div className="space-y-6">

@@ -29,6 +29,7 @@ import { KpiCard } from '../components/common/KpiCard';
 import { DataTable } from '../components/common/DataTable';
 import type { ColumnDef } from '../components/common/DataTable';
 import { CohortHeatmap } from '../components/common/CohortHeatmap';
+import { EmptyDatasetState } from '../components/common/EmptyDatasetState';
 import { useParams } from 'react-router-dom';
 import { useCurrency } from '../context/CurrencyContext';
 import {
@@ -263,6 +264,10 @@ export const CustomerIntelligence: React.FC<CustomerIntelligenceProps> = ({ filt
       render: (row) => <span className="text-slate-500 font-mono text-[11px]">{row.last_order_date}</span>,
     },
   ];
+
+  if (kpis && (!kpis.total_customers || (kpis as any).has_dataset === false)) {
+    return <EmptyDatasetState companyId={activeCompanyId} />;
+  }
 
   return (
     <div className="space-y-6">

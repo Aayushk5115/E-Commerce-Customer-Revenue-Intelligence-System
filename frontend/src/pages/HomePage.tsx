@@ -20,6 +20,9 @@ import {
 import { fetchCompanies } from '../services/api';
 import type { CompanyMetadata } from '../types';
 import { AddCompanyModal } from '../components/common/AddCompanyModal';
+import { DatasetDetailsModal } from '../components/common/DatasetDetailsModal';
+import { ViewDatasetModal } from '../components/common/ViewDatasetModal';
+import { RemoveDatasetDialog } from '../components/common/RemoveDatasetDialog';
 
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
@@ -28,7 +31,13 @@ export const HomePage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedIndustry, setSelectedIndustry] = useState<string>('All');
   const [error, setError] = useState<string | null>(null);
+
+  // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
+  const [selectedCompanyForDetails, setSelectedCompanyForDetails] = useState<CompanyMetadata | null>(null);
+  const [selectedCompanyForView, setSelectedCompanyForView] = useState<CompanyMetadata | null>(null);
+  const [selectedCompanyForRemove, setSelectedCompanyForRemove] = useState<CompanyMetadata | null>(null);
+  const [selectedCompanyForUpload, setSelectedCompanyForUpload] = useState<CompanyMetadata | null>(null);
 
   const loadCatalog = () => {
     setLoading(true);
@@ -285,11 +294,12 @@ export const HomePage: React.FC = () => {
               {filteredCompanies.map((company) => {
                 const color = company.brand_color || '#3b82f6';
                 const baseCurr = company.base_currency || 'USD';
+                const hasDataset = company.dataset_status !== 'NO_DATASET' && (company.total_orders || 0) > 0;
+
                 return (
                   <div
                     key={company.company_id}
-                    onClick={() => navigate(`/company/${company.company_id}`)}
-                    className="group relative rounded-2xl bg-slate-900/70 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 transition-all duration-300 p-6 flex flex-col justify-between shadow-lg hover:shadow-2xl hover:shadow-blue-500/10 cursor-pointer backdrop-blur-md"
+                    className="group relative rounded-2xl bg-slate-900/70 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 transition-all duration-300 p-6 flex flex-col justify-between shadow-lg hover:shadow-2xl hover:shadow-blue-500/10 backdrop-blur-md"
                   >
                     {/* Top Card Section */}
                     <div>
@@ -312,7 +322,7 @@ export const HomePage: React.FC = () => {
                         </div>
 
                         {/* Base Currency Badge */}
-                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 ${
+                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 shrink-0 ${
                           baseCurr === 'INR'
                             ? 'bg-amber-950/60 text-amber-300 border-amber-800/60'
                             : 'bg-blue-950/60 text-blue-300 border-blue-800/60'
@@ -322,52 +332,70 @@ export const HomePage: React.FC = () => {
                         </span>
                       </div>
 
-                      {/* Dataset Source Label */}
-                      <div className="mb-3.5">
+                      {/* Dataset Status & File Badge */}
+                      <div className="flex items-center flex-wrap gap-2 mb-3.5">
                         <span
                           className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase border ${
-                            company.is_synthetic
-                              ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                              : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                            hasDataset
+                              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                              : 'bg-slate-800 text-slate-400 border-slate-700'
                           }`}
                         >
                           <Database size={10} />
-                          <span>{company.dataset_source}</span>
+                          <span>{hasDataset ? `● Ready (${formatNumber(company.total_orders)} Rows)` : '● No Dataset'}</span>
                         </span>
+
+                        {company.dataset_file && (
+                          <span className="text-[10px] font-mono text-slate-400 bg-slate-800/60 px-2 py-0.5 rounded-md truncate max-w-[140px]">
+                            {company.dataset_file}
+                          </span>
+                        )}
                       </div>
 
                       {/* Description */}
-                      <p className="text-xs text-slate-400 line-clamp-3 leading-relaxed mb-6">
+                      <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed mb-4">
                         {company.description}
                       </p>
                     </div>
 
-                    {/* Bottom Snapshot Metrics & CTA */}
+                    {/* Bottom Snapshot Metrics & Dual CTAs */}
                     <div>
-                      <div className="grid grid-cols-3 gap-2 py-3 px-3 rounded-xl bg-slate-950/80 border border-slate-800/80 mb-4 text-center">
+                      <div className="grid grid-cols-3 gap-2 py-2.5 px-3 rounded-xl bg-slate-950/80 border border-slate-800/80 mb-4 text-center">
                         <div>
                           <span className="text-[10px] uppercase font-bold text-slate-500 block">Revenue</span>
                           <span className="text-xs font-bold text-slate-200">
-                            {formatCurrency(company.total_revenue, baseCurr)}
+                            {hasDataset ? formatCurrency(company.total_revenue, baseCurr) : '—'}
                           </span>
                         </div>
                         <div>
                           <span className="text-[10px] uppercase font-bold text-slate-500 block">Orders</span>
                           <span className="text-xs font-bold text-slate-200">
-                            {formatNumber(company.total_orders)}
+                            {hasDataset ? formatNumber(company.total_orders) : '0'}
                           </span>
                         </div>
                         <div>
                           <span className="text-[10px] uppercase font-bold text-slate-500 block">Customers</span>
                           <span className="text-xs font-bold text-slate-200">
-                            {formatNumber(company.total_customers)}
+                            {hasDataset ? formatNumber(company.total_customers) : '0'}
                           </span>
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between text-xs font-bold text-blue-400 group-hover:text-blue-300 pt-1">
-                        <span>Explore Analytics</span>
-                        <ArrowRight size={15} className="group-hover:translate-x-1 transition-transform" />
+                      {/* Dual Action Buttons */}
+                      <div className="flex items-center gap-2 pt-1">
+                        <button
+                          onClick={() => setSelectedCompanyForDetails(company)}
+                          className="flex-1 px-3 py-2 rounded-xl text-xs font-bold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-colors text-center cursor-pointer"
+                        >
+                          Dataset Details
+                        </button>
+                        <button
+                          onClick={() => navigate(`/company/${company.company_id}`)}
+                          className="flex-1 px-3 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 transition-all flex items-center justify-center space-x-1.5 shadow-md shadow-blue-600/20 cursor-pointer"
+                        >
+                          <span>Explore</span>
+                          <ArrowRight size={14} />
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -399,10 +427,10 @@ export const HomePage: React.FC = () => {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center space-x-2">
               <ShieldCheck size={16} className="text-emerald-500" />
-              <span>Multi-Tenant Query Isolation • PII Masking Active • Currency Engine Configured</span>
+              <span>Multi-Tenant Query Isolation • PII Masking Active • Zero Fake Data Ingestion</span>
             </div>
             <div>
-              <span>E-Commerce Customer & Revenue Intelligence System v3.1</span>
+              <span>E-Commerce Customer & Revenue Intelligence System v3.2</span>
             </div>
           </div>
         </section>
@@ -410,10 +438,55 @@ export const HomePage: React.FC = () => {
 
       {/* Add Company Modal Wizard */}
       <AddCompanyModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onCompanyCreated={handleCompanyCreated}
+        isOpen={isAddModalOpen || selectedCompanyForUpload !== null}
+        onClose={() => {
+          setIsAddModalOpen(false);
+          setSelectedCompanyForUpload(null);
+        }}
+        targetCompany={selectedCompanyForUpload}
+        onCompanyCreated={(comp) => {
+          handleCompanyCreated(comp);
+          setIsAddModalOpen(false);
+          setSelectedCompanyForUpload(null);
+          loadCatalog();
+        }}
       />
+
+      {/* Dataset Details Modal */}
+      {selectedCompanyForDetails && (
+        <DatasetDetailsModal
+          isOpen={true}
+          onClose={() => setSelectedCompanyForDetails(null)}
+          company={selectedCompanyForDetails}
+          onOpenViewDataset={() => setSelectedCompanyForView(selectedCompanyForDetails)}
+          onOpenRemoveDataset={() => setSelectedCompanyForRemove(selectedCompanyForDetails)}
+          onOpenUploadDataset={() => setSelectedCompanyForUpload(selectedCompanyForDetails)}
+        />
+      )}
+
+      {/* View Dataset Modal */}
+      {selectedCompanyForView && (
+        <ViewDatasetModal
+          isOpen={true}
+          onClose={() => setSelectedCompanyForView(null)}
+          company={selectedCompanyForView}
+        />
+      )}
+
+      {/* Remove Dataset Dialog */}
+      {selectedCompanyForRemove && (
+        <RemoveDatasetDialog
+          isOpen={true}
+          onClose={() => setSelectedCompanyForRemove(null)}
+          company={selectedCompanyForRemove}
+          onDatasetRemoved={(updated) => {
+            handleCompanyCreated(updated);
+            setSelectedCompanyForRemove(null);
+            setSelectedCompanyForDetails(null);
+            loadCatalog();
+          }}
+        />
+      )}
     </div>
   );
 };
