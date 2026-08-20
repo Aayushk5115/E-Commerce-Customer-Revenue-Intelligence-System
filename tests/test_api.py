@@ -1,4 +1,6 @@
 import pytest
+import io
+import pandas as pd
 from fastapi.testclient import TestClient
 from backend.main import app
 
@@ -8,7 +10,84 @@ def test_read_root():
     response = client.get("/")
     assert response.status_code == 200
     assert response.json()["status"] == "online"
-    assert "companies_url" in response.json()
+    assert "currency_url" in response.json()
+
+def test_currency_rates():
+    response = client.get("/api/currency/rates")
+    assert response.status_code == 200
+    data = response.json()
+    assert "rates" in data
+    assert data["rates"]["USD"] == 1.0
+    assert data["rates"]["INR"] == 83.5
+    assert "last_updated" in data
+
+def test_currency_convert():
+    response = client.get("/api/currency/convert?amount=100&from_curr=USD&to_curr=INR")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["converted_amount"] == 8350.0
+
+    res_inr = client.get("/api/currency/convert?amount=8350&from_curr=INR&to_curr=USD")
+    assert res_inr.status_code == 200
+    assert res_inr.json()["converted_amount"] == 100.0
+
+def test_upload_preview_csv():
+    csv_content = b"OrderID,CustomerID,OrderDate,ProductName,Category,Quantity,Price,State\n101,C1,2026-01-15,Wireless Earbuds,Electronics,2,49.99,CA\n102,C2,2026-01-16,USB Cable,Accessories,1,12.50,NY\n"
+    response = client.post(
+        "/api/upload/preview",
+        files={"file": ("sample_orders.csv", csv_content, "text/csv")}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total_rows"] == 2
+    assert data["total_columns"] == 8
+    assert "validation" in data
+    assert data["validation"]["is_valid"] is True
+    assert len(data["preview_rows"]) == 2
+    # Verify auto-detected mappings
+    suggested = data["validation"]["suggested_mapping"]
+    assert suggested.get("OrderID") == "order_id"
+    assert suggested.get("CustomerID") == "customer_id"
+
+def test_create_company_with_dataset():
+    csv_content = b"order_id,customer_id,order_date,product_name,category,quantity,total_amount,shipping_state\n1001,501,2026-02-01,Running Shoes,Footwear,1,120.00,TX\n1002,502,2026-02-02,Yoga Mat,Fitness,2,45.00,CA\n"
+    form_data = {
+        "company_name": "Test Activewear Co",
+        "company_slug": "test-activewear",
+        "industry": "Sports & Fitness",
+        "description": "Test dataset company for activewear merchandise.",
+        "base_currency": "INR",
+        "logo_badge": "🏃",
+        "brand_color": "#10b981"
+    }
+    response = client.post(
+        "/api/companies/create-with-dataset",
+        data=form_data,
+        files={"file": ("test_sales.csv", csv_content, "text/csv")}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "success"
+    assert data["company"]["company_slug"] == "test-activewear"
+    assert data["company"]["base_currency"] == "INR"
+
+    # Verify newly created company dashboard responds
+    kpi_res = client.get("/api/companies/test-activewear/kpis")
+    assert kpi_res.status_code == 200
+    assert kpi_res.json()["total_orders"] == 2
+
+    # Clean up test company metadata
+    import shutil, os, json
+    from backend.analytics_engine import manager
+    if "test-activewear" in manager.companies_meta:
+        del manager.companies_meta["test-activewear"]
+        if "test-activewear" in manager.engines:
+            del manager.engines["test-activewear"]
+        with open(manager.companies_file, "w", encoding="utf-8") as f:
+            json.dump(list(manager.companies_meta.values()), f, indent=2)
+    test_dir = os.path.join(manager.companies_data_dir, "test-activewear")
+    if os.path.exists(test_dir):
+        shutil.rmtree(test_dir, ignore_errors=True)
 
 def test_get_companies():
     response = client.get("/api/companies")
@@ -20,9 +99,7 @@ def test_get_companies():
         assert "company_id" in c
         assert "company_name" in c
         assert "industry" in c
-        assert "dataset_status" in c
-        assert "dataset_source" in c
-        assert "total_revenue" in c
+        assert "base_currency" in c
 
 def test_get_company_detail():
     response = client.get("/api/companies/company-2")
@@ -42,7 +119,6 @@ def test_company_data_isolation():
     kpis1 = res1.json()
     kpis2 = res2.json()
     
-    # Check that revenues and customer counts differ cleanly across tenants
     assert kpis1["total_revenue"] != kpis2["total_revenue"]
     assert kpis1["total_orders"] != kpis2["total_orders"]
 

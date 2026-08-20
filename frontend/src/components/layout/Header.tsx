@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Menu, RefreshCw, Filter, Clock, ArrowLeft } from 'lucide-react';
 import { CompanySwitcher } from '../common/CompanySwitcher';
+import { CurrencySelector } from '../common/CurrencySelector';
 import type { FilterState, CompanyMetadata } from '../../types';
 
 interface HeaderProps {
@@ -103,6 +104,9 @@ export const Header: React.FC<HeaderProps> = ({
               )}
             </div>
           )}
+
+          {/* Currency Selector (₹ INR / $ USD) */}
+          <CurrencySelector />
 
           {/* Last Updated Timestamp */}
           <div className="hidden lg:flex items-center text-xs text-slate-400 bg-slate-50 dark:bg-slate-800/50 px-3 py-1.5 rounded-lg border border-slate-200/60 dark:border-slate-800">

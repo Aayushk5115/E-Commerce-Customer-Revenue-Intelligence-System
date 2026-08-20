@@ -1507,9 +1507,98 @@ class MultiCompanyAnalyticsManager:
             result.append(c_info)
         return result
 
+    def get_currency_rates(self) -> Dict[str, Any]:
+        """Returns central exchange rates with timestamp."""
+        return {
+            "base": "USD",
+            "rates": {
+                "USD": 1.0,
+                "INR": 83.5
+            },
+            "last_updated": datetime.now().strftime("%Y-%m-%d %H:%M:%S UTC"),
+            "source": "Centralized Configured Exchange Engine (1 USD = ₹83.50 INR)"
+        }
+
+    def convert_currency(self, amount: float, from_curr: str, to_curr: str) -> float:
+        """Converts monetary amount between INR and USD."""
+        if from_curr == to_curr or amount == 0:
+            return float(amount)
+        rate = 83.5
+        if from_curr == "INR" and to_curr == "USD":
+            return float(amount / rate)
+        elif from_curr == "USD" and to_curr == "INR":
+            return float(amount * rate)
+        return float(amount)
+
+    def add_company(
+        self,
+        company_info: Dict[str, Any],
+        raw_df: pd.DataFrame,
+        mapping: Dict[str, str]
+    ) -> Dict[str, Any]:
+        """
+        Creates a new company in the registry, parses & ingests its dataset,
+        and initializes its analytics engine immediately.
+        """
+        from data_normalizer import ingest_user_dataset
+        import re
+
+        company_name = company_info.get("company_name", "New Company").strip()
+        raw_slug = company_info.get("company_slug") or company_name.lower()
+        slug = re.sub(r'[^a-z0-9-]', '', raw_slug.lower().replace(' ', '-')).strip('-')
+        if not slug:
+            slug = f"company-{len(self.companies_meta) + 1}"
+
+        company_id = slug
+        industry = company_info.get("industry", "E-Commerce").strip()
+        description = company_info.get("description", f"Enterprise analytics for {company_name}.").strip()
+        logo_badge = company_info.get("logo_badge", "🏢")
+        brand_color = company_info.get("brand_color", "#3b82f6")
+        base_currency = company_info.get("base_currency", "INR").upper()
+        if base_currency not in ["INR", "USD"]:
+            base_currency = "INR"
+
+        comp_dir = os.path.join(self.companies_data_dir, company_id)
+        os.makedirs(comp_dir, exist_ok=True)
+
+        # Ingest and normalize dataset
+        stats = ingest_user_dataset(company_info, raw_df, mapping, comp_dir)
+
+        new_meta = {
+            "company_id": company_id,
+            "company_name": company_name,
+            "company_slug": slug,
+            "logo_badge": logo_badge,
+            "brand_color": brand_color,
+            "industry": industry,
+            "description": description,
+            "dataset_source": "User Uploaded Dataset",
+            "dataset_status": "Active (Custom)",
+            "is_synthetic": False,
+            "base_currency": base_currency,
+            "total_revenue": stats.get("total_revenue", 0.0),
+            "total_orders": stats.get("orders_count", 0),
+            "total_customers": stats.get("customers_count", 0),
+            "supported_modules": ["executive", "customers", "products", "marketing", "forecast", "insights"],
+            "created_at": datetime.now().isoformat()
+        }
+
+        self.companies_meta[company_id] = new_meta
+
+        # Persist updated companies.json
+        try:
+            with open(self.companies_file, "w", encoding="utf-8") as f:
+                json.dump(list(self.companies_meta.values()), f, indent=2)
+        except Exception as e:
+            print(f"[MultiCompanyAnalyticsManager] Error saving companies.json: {e}")
+
+        # Initialize and prime engine
+        self.engines[company_id] = CompanyAnalyticsEngine(company_id, comp_dir)
+
+        return new_meta
+
     def get_company_meta(self, company_id: str) -> Optional[Dict[str, Any]]:
         cid = company_id.lower().replace("_", "-")
-        # Try direct or slug match
         for k, v in self.companies_meta.items():
             if k == cid or v.get("company_slug") == cid or k.replace("-", "_") == cid:
                 return v
@@ -1518,7 +1607,6 @@ class MultiCompanyAnalyticsManager:
     def get_engine(self, company_id: str = "company-1") -> CompanyAnalyticsEngine:
         cid = company_id.lower().replace("_", "-")
         
-        # Match company id or slug
         matched_id = None
         for k, v in self.companies_meta.items():
             if k == cid or v.get("company_slug") == cid or k.replace("-", "_") == cid:
@@ -1531,7 +1619,6 @@ class MultiCompanyAnalyticsManager:
         if matched_id not in self.engines:
             comp_path = os.path.join(self.companies_data_dir, matched_id)
             if not os.path.exists(comp_path):
-                # Fallback to root data folder if company partition directory not yet created
                 comp_path = os.path.join(self.base_dir, "data")
                 
             self.engines[matched_id] = CompanyAnalyticsEngine(matched_id, comp_path)

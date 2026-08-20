@@ -27,6 +27,7 @@ import { DataTable } from '../components/common/DataTable';
 import type { ColumnDef } from '../components/common/DataTable';
 import { PerformanceMatrix } from '../components/common/PerformanceMatrix';
 import { useParams } from 'react-router-dom';
+import { useCurrency } from '../context/CurrencyContext';
 import {
   fetchProductKpis,
   fetchProductPerformance,
@@ -53,6 +54,7 @@ export const ProductIntelligence: React.FC<ProductIntelligenceProps> = ({
 }) => {
   const params = useParams<{ companyId?: string }>();
   const activeCompanyId = propCompanyId || params.companyId || 'company-1';
+  const { formatCurrency, getCurrencySymbol } = useCurrency();
 
   const [kpis, setKpis] = useState<ProductKpis | null>(null);
   const [perf, setPerf] = useState<ProductPerformance | null>(null);
@@ -169,8 +171,8 @@ export const ProductIntelligence: React.FC<ProductIntelligenceProps> = ({
       align: 'right',
       render: (row) => (
         <div className="font-mono">
-          <span className="font-bold text-slate-900 dark:text-white block">${row.price.toFixed(2)}</span>
-          <span className="text-[10px] text-slate-400">${row.cost.toFixed(2)} cost</span>
+          <span className="font-bold text-slate-900 dark:text-white block">{formatCurrency(row.price, { compact: false, decimals: 2 })}</span>
+          <span className="text-[10px] text-slate-400">{formatCurrency(row.cost, { compact: false, decimals: 2 })} cost</span>
         </div>
       ),
     },
@@ -192,7 +194,7 @@ export const ProductIntelligence: React.FC<ProductIntelligenceProps> = ({
       align: 'right',
       render: (row) => (
         <span className="font-extrabold text-slate-900 dark:text-white font-mono">
-          ${row.revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          {formatCurrency(row.revenue, { compact: false, decimals: 2 })}
         </span>
       ),
     },
@@ -203,7 +205,7 @@ export const ProductIntelligence: React.FC<ProductIntelligenceProps> = ({
       align: 'right',
       render: (row) => (
         <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono">
-          ${row.profit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          {formatCurrency(row.profit, { compact: false, decimals: 2 })}
         </span>
       ),
     },
@@ -264,18 +266,14 @@ export const ProductIntelligence: React.FC<ProductIntelligenceProps> = ({
 
         <KpiCard
           title="Product Revenue"
-          value={kpis ? (kpis.revenue / 1000000).toFixed(2) : '—'}
-          prefix="$"
-          suffix="M"
+          value={kpis ? formatCurrency(kpis.revenue, { compact: true }) : '—'}
           icon={<DollarSign size={18} />}
           tooltip="Cumulative merchandise gross revenue."
         />
 
         <KpiCard
           title="Product Net Profit"
-          value={kpis ? (kpis.profit / 1000000).toFixed(2) : '—'}
-          prefix="$"
-          suffix="M"
+          value={kpis ? formatCurrency(kpis.profit, { compact: true }) : '—'}
           icon={<TrendingUp size={18} />}
           tooltip="Merchandise gross profit generated across all items."
         />
@@ -334,7 +332,7 @@ export const ProductIntelligence: React.FC<ProductIntelligenceProps> = ({
                   stroke="#94a3b8"
                   fontSize={11}
                   tickLine={false}
-                  tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`}
+                  tickFormatter={(v) => formatCurrency(v, { compact: true })}
                 />
                 <Tooltip
                   formatter={(val: any) => [`$${(Number(val) / 1000000).toFixed(2)}M`, 'Revenue']}

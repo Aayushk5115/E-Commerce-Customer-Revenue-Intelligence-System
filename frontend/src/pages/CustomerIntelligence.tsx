@@ -29,6 +29,8 @@ import { KpiCard } from '../components/common/KpiCard';
 import { DataTable } from '../components/common/DataTable';
 import type { ColumnDef } from '../components/common/DataTable';
 import { CohortHeatmap } from '../components/common/CohortHeatmap';
+import { useParams } from 'react-router-dom';
+import { useCurrency } from '../context/CurrencyContext';
 import {
   fetchCustomerKpis,
   fetchCustomerSegments,
@@ -57,6 +59,7 @@ interface CustomerIntelligenceProps {
 export const CustomerIntelligence: React.FC<CustomerIntelligenceProps> = ({ filters, companyId: propCompanyId }) => {
   const params = useParams<{ companyId?: string }>();
   const activeCompanyId = propCompanyId || params.companyId || 'company-1';
+  const { formatCurrency, getCurrencySymbol } = useCurrency();
 
   const [kpis, setKpis] = useState<CustomerKpis | null>(null);
   const [segments, setSegments] = useState<CustomerSegmentItem[]>([]);
@@ -192,7 +195,7 @@ export const CustomerIntelligence: React.FC<CustomerIntelligenceProps> = ({ filt
       align: 'right',
       render: (row) => (
         <span className="font-extrabold text-slate-900 dark:text-white font-mono">
-          ${row.total_spent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          {formatCurrency(row.total_spent, { compact: false, decimals: 2 })}
         </span>
       ),
     },
@@ -201,7 +204,7 @@ export const CustomerIntelligence: React.FC<CustomerIntelligenceProps> = ({ filt
       header: 'AOV',
       sortable: true,
       align: 'right',
-      render: (row) => <span className="font-medium text-slate-600 dark:text-slate-300">${row.aov.toFixed(2)}</span>,
+      render: (row) => <span className="font-medium text-slate-600 dark:text-slate-300">{formatCurrency(row.aov, { compact: false, decimals: 2 })}</span>,
     },
     {
       key: 'rfm_segment',
@@ -281,8 +284,7 @@ export const CustomerIntelligence: React.FC<CustomerIntelligenceProps> = ({ filt
 
         <KpiCard
           title="Customer Lifetime Value"
-          value={kpis ? kpis.avg_clv.toFixed(2) : '—'}
-          prefix="$"
+          value={kpis ? formatCurrency(kpis.avg_clv, { compact: false, decimals: 2 }) : '—'}
           icon={<DollarSign size={18} />}
           tooltip="Historical average revenue generated per customer."
         />
@@ -321,9 +323,7 @@ export const CustomerIntelligence: React.FC<CustomerIntelligenceProps> = ({ filt
 
         <KpiCard
           title="Revenue at Risk"
-          value={kpis ? (kpis.revenue_at_risk / 1000000).toFixed(2) : '—'}
-          prefix="$"
-          suffix="M"
+          value={kpis ? formatCurrency(kpis.revenue_at_risk, { compact: true }) : '—'}
           invertColor={true}
           icon={<ShieldAlert size={18} />}
           tooltip="Prior cumulative revenue from high churn-risk customer cohort."

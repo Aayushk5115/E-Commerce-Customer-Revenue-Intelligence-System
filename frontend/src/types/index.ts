@@ -9,6 +9,7 @@ export interface CompanyMetadata {
   dataset_source: string;
   dataset_status: string;
   is_synthetic: boolean;
+  base_currency?: 'INR' | 'USD';
   total_revenue?: number;
   total_orders?: number;
   total_customers?: number;
@@ -21,6 +22,47 @@ export interface CompanyMetadata {
     profit_margin: number;
     revenue_growth: number;
   };
+}
+
+export interface CurrencyRateResponse {
+  base: string;
+  rates: {
+    USD: number;
+    INR: number;
+  };
+  last_updated: string;
+  source: string;
+}
+
+export interface ColumnSummary {
+  column_name: string;
+  data_type: 'string' | 'numeric' | 'datetime' | 'boolean';
+  missing_count: number;
+  missing_pct: number;
+  unique_count: number;
+  mapped_to: string;
+}
+
+export interface ValidationReport {
+  is_valid: boolean;
+  total_rows: number;
+  total_columns: number;
+  duplicate_rows: number;
+  errors: string[];
+  warnings: string[];
+  column_summary: ColumnSummary[];
+  suggested_mapping: Record<string, string>;
+  available_target_fields: Record<string, string>;
+}
+
+export interface DatasetPreviewResponse {
+  file_name: string;
+  file_size_bytes: number;
+  total_rows: number;
+  total_columns: number;
+  columns: string[];
+  validation: ValidationReport;
+  preview_rows: Record<string, any>[];
 }
 
 export interface FilterOptions {

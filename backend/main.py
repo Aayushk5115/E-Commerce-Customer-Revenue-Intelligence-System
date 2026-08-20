@@ -1,19 +1,22 @@
-from fastapi import FastAPI, Query, HTTPException, Path
+from fastapi import FastAPI, Query, HTTPException, Path, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional, List, Dict, Any
 import os
 import sys
+import json
+import pandas as pd
 
 # Ensure local imports work whether run from root or backend directory
 sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from analytics_engine import manager, engine
+from data_normalizer import read_dataset_file, validate_dataset, detect_column_mapping
 
 app = FastAPI(
     title="E-Commerce Multi-Company Customer & Revenue Intelligence API",
     description="Multi-tenant, high-performance analytics API powering executive overview, customer RFM/churn intelligence, product analytics, ARIMA forecasting, marketing ROAS/CAC, and dynamic business insights across multiple enterprise companies.",
-    version="3.0.0"
+    version="3.1.0"
 )
 
 # Enable CORS for frontend
@@ -30,13 +33,134 @@ def read_root():
     return {
         "status": "online",
         "service": "E-Commerce Multi-Company Customer & Revenue Intelligence API",
-        "version": "3.0.0",
+        "version": "3.1.0",
         "companies_url": "/api/companies",
+        "currency_url": "/api/currency/rates",
         "docs_url": "/docs"
     }
 
 # ==========================================
-# 0. COMPANY DISCOVERY & REGISTRY
+# 0. CURRENCY EXCHANGE ENGINE
+# ==========================================
+@app.get("/api/currency/rates")
+def get_currency_rates():
+    """Returns real-time and configured exchange rates between USD and INR."""
+    return manager.get_currency_rates()
+
+@app.get("/api/currency/convert")
+def convert_currency_endpoint(
+    amount: float = Query(..., description="Monetary value to convert"),
+    from_curr: str = Query("USD", description="Source currency (USD/INR)"),
+    to_curr: str = Query("INR", description="Target currency (USD/INR)")
+):
+    """Converts monetary amount between INR and USD."""
+    converted = manager.convert_currency(amount, from_curr.upper(), to_curr.upper())
+    return {
+        "original_amount": amount,
+        "from_currency": from_curr.upper(),
+        "to_currency": to_curr.upper(),
+        "converted_amount": round(converted, 2)
+    }
+
+# ==========================================
+# 1. DATASET UPLOAD & VALIDATION PREVIEW
+# ==========================================
+@app.post("/api/upload/preview")
+async def preview_uploaded_dataset(
+    file: UploadFile = File(...)
+):
+    """
+    Receives user-uploaded CSV or Excel file, generates statistical preview,
+    detects column mappings, checks for errors/warnings, and returns first 10 rows.
+    """
+    try:
+        contents = await file.read()
+        if len(contents) == 0:
+            raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+
+        # Limit to 50MB
+        if len(contents) > 50 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="File size exceeds the 50MB limit.")
+
+        df = read_dataset_file(contents, file.filename)
+        
+        # Run column detection and diagnostics
+        mapping = detect_column_mapping(df)
+        validation_report = validate_dataset(df, mapping)
+
+        # Prepare top 10 preview rows (convert NaN to None for clean JSON serialization)
+        preview_df = df.head(10).fillna("")
+        preview_rows = preview_df.to_dict(orient="records")
+
+        return {
+            "file_name": file.filename,
+            "file_size_bytes": len(contents),
+            "total_rows": len(df),
+            "total_columns": len(df.columns),
+            "columns": [str(c) for c in df.columns],
+            "validation": validation_report,
+            "preview_rows": preview_rows
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to process file: {str(e)}")
+
+# ==========================================
+# 2. CREATE COMPANY WITH UPLOADED DATASET
+# ==========================================
+@app.post("/api/companies/create-with-dataset")
+async def create_company_with_dataset(
+    file: UploadFile = File(...),
+    company_name: str = Form(...),
+    company_slug: Optional[str] = Form(None),
+    industry: str = Form("E-Commerce"),
+    description: Optional[str] = Form(None),
+    base_currency: str = Form("INR"),
+    logo_badge: Optional[str] = Form("🏢"),
+    brand_color: Optional[str] = Form("#3b82f6"),
+    column_mapping: Optional[str] = Form(None)
+):
+    """
+    Ingests and validates a user dataset, associates it with a new company,
+    partitions the tables, computes baseline models, and creates the company in the catalog.
+    """
+    try:
+        contents = await file.read()
+        if len(contents) == 0:
+            raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+
+        df = read_dataset_file(contents, file.filename)
+
+        # Parse user column mapping or auto-detect
+        mapping = {}
+        if column_mapping:
+            try:
+                mapping = json.loads(column_mapping)
+            except Exception:
+                mapping = detect_column_mapping(df)
+        else:
+            mapping = detect_column_mapping(df)
+
+        company_info = {
+            "company_name": company_name,
+            "company_slug": company_slug,
+            "industry": industry,
+            "description": description or f"Analytics and intelligence dashboard for {company_name}.",
+            "base_currency": base_currency.upper(),
+            "logo_badge": logo_badge or "🏢",
+            "brand_color": brand_color or "#3b82f6"
+        }
+
+        created_meta = manager.add_company(company_info, df, mapping)
+        return {
+            "status": "success",
+            "message": f"Company '{company_name}' successfully created and dataset ingested.",
+            "company": created_meta
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to create company with dataset: {str(e)}")
+
+# ==========================================
+# 3. COMPANY DISCOVERY & REGISTRY
 # ==========================================
 @app.get("/api/companies")
 def get_companies():
@@ -64,7 +188,7 @@ def get_company(company_id: str = Path(..., description="Unique company ID or sl
     return comp_data
 
 # ==========================================
-# 1. COMPANY-AWARE FILTER OPTIONS
+# 4. COMPANY-AWARE FILTER OPTIONS
 # ==========================================
 @app.get("/api/companies/{company_id}/filters")
 @app.get("/api/filters")
@@ -74,7 +198,7 @@ def get_filters(company_id: str = "company-1"):
     return eng.get_filter_options()
 
 # ==========================================
-# 2. COMPANY-AWARE EXECUTIVE & FINANCIAL METRICS
+# 5. COMPANY-AWARE EXECUTIVE & FINANCIAL METRICS
 # ==========================================
 @app.get("/api/companies/{company_id}/kpis")
 @app.get("/api/kpis")
@@ -169,7 +293,7 @@ def get_top_products(
     return eng.get_top_products(limit=limit)
 
 # ==========================================
-# 3. COMPANY-AWARE CUSTOMER INTELLIGENCE & CHURN
+# 6. COMPANY-AWARE CUSTOMER INTELLIGENCE & CHURN
 # ==========================================
 @app.get("/api/companies/{company_id}/customers/kpis")
 @app.get("/api/customers/kpis")
@@ -242,7 +366,7 @@ def get_customers(
     )
 
 # ==========================================
-# 4. COMPANY-AWARE PRODUCT INTELLIGENCE
+# 7. COMPANY-AWARE PRODUCT INTELLIGENCE
 # ==========================================
 @app.get("/api/companies/{company_id}/products/kpis")
 @app.get("/api/products/kpis")
@@ -305,7 +429,7 @@ def get_products(
     )
 
 # ==========================================
-# 5. COMPANY-AWARE ARIMA FORECASTING
+# 8. COMPANY-AWARE ARIMA FORECASTING
 # ==========================================
 @app.get("/api/companies/{company_id}/forecast")
 @app.get("/api/forecast")
@@ -318,7 +442,7 @@ def get_forecast(
     return eng.get_forecast(horizon=horizon)
 
 # ==========================================
-# 6. COMPANY-AWARE COHORT RETENTION ANALYSIS
+# 9. COMPANY-AWARE COHORT RETENTION ANALYSIS
 # ==========================================
 @app.get("/api/companies/{company_id}/cohorts")
 @app.get("/api/cohorts")
@@ -328,7 +452,7 @@ def get_cohorts(company_id: str = "company-1"):
     return eng.get_cohort_analysis()
 
 # ==========================================
-# 7. COMPANY-AWARE MARKETING & ACQUISITION ANALYTICS
+# 10. COMPANY-AWARE MARKETING & ACQUISITION ANALYTICS
 # ==========================================
 @app.get("/api/companies/{company_id}/marketing")
 @app.get("/api/marketing")
@@ -338,7 +462,7 @@ def get_marketing(company_id: str = "company-1"):
     return eng.get_marketing_analytics()
 
 # ==========================================
-# 8. COMPANY-AWARE BUSINESS INSIGHTS ENGINE
+# 11. COMPANY-AWARE BUSINESS INSIGHTS ENGINE
 # ==========================================
 @app.get("/api/companies/{company_id}/insights")
 @app.get("/api/insights")

@@ -9,6 +9,7 @@ import {
   Target,
 } from 'lucide-react';
 import { useParams } from 'react-router-dom';
+import { useCurrency } from '../context/CurrencyContext';
 import { fetchInsights } from '../services/api';
 import type { BusinessInsight, FilterState } from '../types';
 
@@ -23,6 +24,7 @@ export const BusinessInsights: React.FC<BusinessInsightsProps> = ({
 }) => {
   const params = useParams<{ companyId?: string }>();
   const activeCompanyId = propCompanyId || params.companyId || 'company-1';
+  const { formatCurrency, getCurrencySymbol } = useCurrency();
 
   const [insights, setInsights] = useState<BusinessInsight[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');

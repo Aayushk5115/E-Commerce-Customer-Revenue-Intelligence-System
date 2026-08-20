@@ -18,6 +18,7 @@ import {
   Tooltip,
 } from 'recharts';
 import { useParams } from 'react-router-dom';
+import { useCurrency } from '../context/CurrencyContext';
 import { KpiCard } from '../components/common/KpiCard';
 import { fetchForecast } from '../services/api';
 import type { ForecastResponse } from '../types';
@@ -29,6 +30,7 @@ interface ForecastingProps {
 export const Forecasting: React.FC<ForecastingProps> = ({ companyId: propCompanyId }) => {
   const params = useParams<{ companyId?: string }>();
   const activeCompanyId = propCompanyId || params.companyId || 'company-1';
+  const { formatCurrency, getCurrencySymbol } = useCurrency();
 
   const [horizon, setHorizon] = useState<number>(6);
   const [forecastData, setForecastData] = useState<ForecastResponse | null>(null);
@@ -104,11 +106,9 @@ export const Forecasting: React.FC<ForecastingProps> = ({ companyId: propCompany
           title="Projected Future Revenue"
           value={
             forecastData
-              ? (forecastData.total_projected_revenue / 1000000).toFixed(2)
+              ? formatCurrency(forecastData.total_projected_revenue, { compact: true })
               : '—'
           }
-          prefix="$"
-          suffix="M"
           icon={<TrendingUp size={18} />}
           tooltip="Total expected revenue across forecast window."
         />
@@ -172,7 +172,7 @@ export const Forecasting: React.FC<ForecastingProps> = ({ companyId: propCompany
                 stroke="#94a3b8"
                 fontSize={11}
                 tickLine={false}
-                tickFormatter={(v) => `$${(v / 1000000).toFixed(1)}M`}
+                tickFormatter={(v) => formatCurrency(v, { compact: true })}
               />
               <Tooltip
                 formatter={(val: any, name: any) => {
@@ -183,7 +183,7 @@ export const Forecasting: React.FC<ForecastingProps> = ({ companyId: propCompany
                     lower_bound_95: 'Lower 95% Bound',
                     upper_bound_95: 'Upper 95% Bound',
                   };
-                  return [`$${Number(val).toLocaleString()}`, labelMap[name] || name];
+                  return [formatCurrency(Number(val), { compact: false, decimals: 2 }), labelMap[name] || name];
                 }}
                 contentStyle={{
                   backgroundColor: '#0f172a',

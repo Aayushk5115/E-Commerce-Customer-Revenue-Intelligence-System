@@ -10,6 +10,7 @@ import { MarketingAnalytics } from './pages/MarketingAnalytics';
 import { Forecasting } from './pages/Forecasting';
 import { BusinessInsights } from './pages/BusinessInsights';
 import { fetchFilterOptions, fetchCompanyDetail } from './services/api';
+import { CurrencyProvider, useCurrency } from './context/CurrencyContext';
 import type { FilterOptions, FilterState, CompanyMetadata } from './types';
 
 // Page Title Mapping Helper
@@ -54,6 +55,7 @@ const getPageMeta = (pathname: string, companyName?: string) => {
 const CompanyDashboardLayout: React.FC = () => {
   const { companyId = 'company-1' } = useParams<{ companyId: string }>();
   const location = useLocation();
+  const { setCompanyBaseCurrency } = useCurrency();
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
   const [company, setCompany] = useState<CompanyMetadata | null>(null);
   const [filterOptions, setFilterOptions] = useState<FilterOptions | null>(null);
@@ -67,12 +69,17 @@ const CompanyDashboardLayout: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [lastUpdated, setLastUpdated] = useState<string>(new Date().toLocaleTimeString());
 
-  // Fetch company metadata
+  // Fetch company metadata and sync base currency
   useEffect(() => {
     fetchCompanyDetail(companyId)
-      .then((c) => setCompany(c))
+      .then((c) => {
+        setCompany(c);
+        if (c.base_currency) {
+          setCompanyBaseCurrency(c.base_currency);
+        }
+      })
       .catch((err) => console.error('Failed to load company detail:', err));
-  }, [companyId]);
+  }, [companyId, setCompanyBaseCurrency]);
 
   // Load filter limits and options for active company
   useEffect(() => {
@@ -124,7 +131,7 @@ const CompanyDashboardLayout: React.FC = () => {
 
       {/* Main Content Area */}
       <div className="lg:pl-72 flex flex-col flex-1 min-w-0">
-        {/* Sticky Header with Company Switcher */}
+        {/* Sticky Header with Company Switcher & Currency Selector */}
         <Header
           title={meta.title}
           subtitle={meta.subtitle}
@@ -134,7 +141,12 @@ const CompanyDashboardLayout: React.FC = () => {
           filters={filters}
           lastUpdated={lastUpdated}
           currentCompanyId={companyId}
-          onCompanyChange={(c) => setCompany(c)}
+          onCompanyChange={(c) => {
+            setCompany(c);
+            if (c.base_currency) {
+              setCompanyBaseCurrency(c.base_currency);
+            }
+          }}
         />
 
         {/* Company Analytics Sub-modules */}
@@ -199,24 +211,27 @@ const CompanyDashboardLayout: React.FC = () => {
 
 export default function App() {
   return (
-    <Router>
-      <Routes>
-        {/* Public Home Page - Company Catalog & Platform Overview */}
-        <Route path="/" element={<HomePage />} />
+    <CurrencyProvider>
+      <Router>
+        <Routes>
+          {/* Public Home Page - Company Catalog & Platform Overview */}
+          <Route path="/" element={<HomePage />} />
 
-        {/* Company-Specific Analytics Dashboard Route */}
-        <Route path="/company/:companyId/*" element={<CompanyDashboardLayout />} />
+          {/* Company-Specific Analytics Dashboard Route */}
+          <Route path="/company/:companyId/*" element={<CompanyDashboardLayout />} />
 
-        {/* Legacy route redirects for backward compatibility */}
-        <Route path="/customers" element={<Navigate to="/company/company-1/customers" replace />} />
-        <Route path="/products" element={<Navigate to="/company/company-1/products" replace />} />
-        <Route path="/marketing" element={<Navigate to="/company/company-1/marketing" replace />} />
-        <Route path="/forecast" element={<Navigate to="/company/company-1/forecast" replace />} />
-        <Route path="/insights" element={<Navigate to="/company/company-1/insights" replace />} />
+          {/* Legacy route redirects for backward compatibility */}
+          <Route path="/customers" element={<Navigate to="/company/company-1/customers" replace />} />
+          <Route path="/products" element={<Navigate to="/company/company-1/products" replace />} />
+          <Route path="/marketing" element={<Navigate to="/company/company-1/marketing" replace />} />
+          <Route path="/forecast" element={<Navigate to="/company/company-1/forecast" replace />} />
+          <Route path="/insights" element={<Navigate to="/company/company-1/insights" replace />} />
 
-        {/* Catch-all redirect to Home Page */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Router>
+          {/* Catch-all redirect to Home Page */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Router>
+    </CurrencyProvider>
   );
 }
+

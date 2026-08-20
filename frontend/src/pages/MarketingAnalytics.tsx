@@ -25,6 +25,7 @@ import { KpiCard } from '../components/common/KpiCard';
 import { DataTable } from '../components/common/DataTable';
 import type { ColumnDef } from '../components/common/DataTable';
 import { useParams } from 'react-router-dom';
+import { useCurrency } from '../context/CurrencyContext';
 import { fetchMarketing } from '../services/api';
 import type { MarketingResponse, MarketingCampaignItem } from '../types';
 
@@ -35,6 +36,7 @@ interface MarketingAnalyticsProps {
 export const MarketingAnalytics: React.FC<MarketingAnalyticsProps> = ({ companyId: propCompanyId }) => {
   const params = useParams<{ companyId?: string }>();
   const activeCompanyId = propCompanyId || params.companyId || 'company-1';
+  const { formatCurrency, getCurrencySymbol } = useCurrency();
 
   const [data, setData] = useState<MarketingResponse | null>(null);
   const [searchValue, setSearchValue] = useState<string>('');
@@ -122,7 +124,7 @@ export const MarketingAnalytics: React.FC<MarketingAnalyticsProps> = ({ companyI
       header: 'Spend',
       sortable: true,
       align: 'right',
-      render: (row) => <span className="font-mono text-slate-700 dark:text-slate-300">${row.spend.toLocaleString()}</span>,
+      render: (row) => <span className="font-mono text-slate-700 dark:text-slate-300">{formatCurrency(row.spend, { compact: false, decimals: 2 })}</span>,
     },
     {
       key: 'revenue',
@@ -131,7 +133,7 @@ export const MarketingAnalytics: React.FC<MarketingAnalyticsProps> = ({ companyI
       align: 'right',
       render: (row) => (
         <span className="font-mono font-bold text-slate-900 dark:text-white">
-          ${row.revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          {formatCurrency(row.revenue, { compact: false, decimals: 2 })}
         </span>
       ),
     },
@@ -152,7 +154,7 @@ export const MarketingAnalytics: React.FC<MarketingAnalyticsProps> = ({ companyI
       header: 'CAC',
       sortable: true,
       align: 'right',
-      render: (row) => <span className="font-mono text-slate-700 dark:text-slate-300">${row.cac.toFixed(2)}</span>,
+      render: (row) => <span className="font-mono text-slate-700 dark:text-slate-300">{formatCurrency(row.cac, { compact: false, decimals: 2 })}</span>,
     },
     {
       key: 'conversions',
@@ -182,18 +184,14 @@ export const MarketingAnalytics: React.FC<MarketingAnalyticsProps> = ({ companyI
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <KpiCard
           title="Total Ad Spend"
-          value={data ? (data.kpis.total_spend / 1000000).toFixed(2) : '—'}
-          prefix="$"
-          suffix="M"
+          value={data ? formatCurrency(data.kpis.total_spend, { compact: true }) : '—'}
           icon={<DollarSign size={16} />}
           tooltip="Cumulative marketing budget deployed across all campaigns."
         />
 
         <KpiCard
           title="Attributed Revenue"
-          value={data ? (data.kpis.total_revenue / 1000000).toFixed(2) : '—'}
-          prefix="$"
-          suffix="M"
+          value={data ? formatCurrency(data.kpis.total_revenue, { compact: true }) : '—'}
           icon={<TrendingUp size={16} />}
           tooltip="Direct revenue generated from ad conversions."
         />
@@ -208,8 +206,7 @@ export const MarketingAnalytics: React.FC<MarketingAnalyticsProps> = ({ companyI
 
         <KpiCard
           title="Blended CAC"
-          value={data ? data.kpis.overall_cac.toFixed(2) : '—'}
-          prefix="$"
+          value={data ? formatCurrency(data.kpis.overall_cac, { compact: false, decimals: 2 }) : '—'}
           invertColor={true}
           icon={<Zap size={16} />}
           tooltip="Customer Acquisition Cost (Ad Spend / Conversions)."

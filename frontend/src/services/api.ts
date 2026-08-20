@@ -1,6 +1,8 @@
 import axios from 'axios';
 import type {
   CompanyMetadata,
+  CurrencyRateResponse,
+  DatasetPreviewResponse,
   FilterOptions,
   FilterState,
   ExecutiveKpis,
@@ -54,7 +56,40 @@ const buildParams = (filters?: FilterState) => {
 };
 
 // ==========================================
-// 1. COMPANY REGISTRY & DISCOVERY
+// 0. CURRENCY EXCHANGE API
+// ==========================================
+export const fetchCurrencyRates = async (): Promise<CurrencyRateResponse> => {
+  const res = await api.get<CurrencyRateResponse>('/currency/rates');
+  return res.data;
+};
+
+// ==========================================
+// 1. DATASET UPLOAD & COMPANY CREATION
+// ==========================================
+export const previewDatasetFile = async (file: File): Promise<DatasetPreviewResponse> => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await api.post<DatasetPreviewResponse>('/upload/preview', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return res.data;
+};
+
+export const createCompanyWithDataset = async (
+  formData: FormData
+): Promise<{ status: string; message: string; company: CompanyMetadata }> => {
+  const res = await api.post<{ status: string; message: string; company: CompanyMetadata }>(
+    '/companies/create-with-dataset',
+    formData,
+    {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }
+  );
+  return res.data;
+};
+
+// ==========================================
+// 2. COMPANY REGISTRY & DISCOVERY
 // ==========================================
 export const fetchCompanies = async (): Promise<CompanyMetadata[]> => {
   const res = await api.get<CompanyMetadata[]>('/companies');

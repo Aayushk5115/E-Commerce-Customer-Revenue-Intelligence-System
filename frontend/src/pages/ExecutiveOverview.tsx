@@ -26,6 +26,7 @@ import {
 import { KpiCard } from '../components/common/KpiCard';
 import { GlobalFilterBar } from '../components/common/GlobalFilterBar';
 import { useParams } from 'react-router-dom';
+import { useCurrency } from '../context/CurrencyContext';
 import {
   fetchExecutiveKpis,
   fetchRevenueTrend,
@@ -62,6 +63,7 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
 }) => {
   const params = useParams<{ companyId?: string }>();
   const activeCompanyId = propCompanyId || params.companyId || 'company-1';
+  const { formatCurrency, getCurrencySymbol } = useCurrency();
 
   const [kpis, setKpis] = useState<ExecutiveKpis | null>(null);
   const [trend, setTrend] = useState<RevenueTrendItem[]>([]);
@@ -116,22 +118,18 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
         <KpiCard
           title="Total Revenue"
-          value={kpis ? (kpis.total_revenue / 1000000).toFixed(2) : '—'}
-          prefix="$"
-          suffix="M"
+          value={kpis ? formatCurrency(kpis.total_revenue, { compact: true }) : '—'}
           changePct={kpis?.revenue_change_pct}
-          prevValue={kpis ? (kpis.prev_revenue / 1000000).toFixed(2) : undefined}
+          prevValue={kpis ? formatCurrency(kpis.prev_revenue, { compact: true }) : undefined}
           icon={<DollarSign size={18} />}
           tooltip="Gross revenue from all completed and returned orders in selected slice."
         />
 
         <KpiCard
           title="Total Net Profit"
-          value={kpis ? (kpis.total_profit / 1000000).toFixed(2) : '—'}
-          prefix="$"
-          suffix="M"
+          value={kpis ? formatCurrency(kpis.total_profit, { compact: true }) : '—'}
           changePct={kpis?.profit_change_pct}
-          prevValue={kpis ? (kpis.prev_profit / 1000000).toFixed(2) : undefined}
+          prevValue={kpis ? formatCurrency(kpis.prev_profit, { compact: true }) : undefined}
           icon={<TrendingUp size={18} />}
           tooltip="Item revenue minus cost of goods sold (COGS)."
         />
@@ -148,10 +146,9 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
 
         <KpiCard
           title="Avg Order Value (AOV)"
-          value={kpis ? kpis.aov.toFixed(2) : '—'}
-          prefix="$"
+          value={kpis ? formatCurrency(kpis.aov, { compact: false, decimals: 2 }) : '—'}
           changePct={kpis?.aov_change_pct}
-          prevValue={kpis ? kpis.prev_aov.toFixed(2) : undefined}
+          prevValue={kpis ? formatCurrency(kpis.prev_aov, { compact: false, decimals: 2 }) : undefined}
           icon={<ShoppingCart size={18} />}
           tooltip="Average monetary amount per completed transaction."
         />
@@ -248,11 +245,11 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
                   stroke="#94a3b8"
                   fontSize={11}
                   tickLine={false}
-                  tickFormatter={(v) => `$${(v / 1000000).toFixed(1)}M`}
+                  tickFormatter={(v) => formatCurrency(v, { compact: true })}
                 />
                 <Tooltip
                   formatter={(val: any, name: any) => [
-                    `$${Number(val).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                    formatCurrency(Number(val), { compact: false, decimals: 2 }),
                     name === 'revenue' ? 'Revenue' : 'Profit',
                   ]}
                   contentStyle={{
@@ -365,10 +362,10 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
                   stroke="#94a3b8"
                   fontSize={11}
                   tickLine={false}
-                  tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`}
+                  tickFormatter={(v) => formatCurrency(v, { compact: true })}
                 />
                 <Tooltip
-                  formatter={(val: any) => [`$${(Number(val) / 1000000).toFixed(2)}M`, 'Revenue']}
+                  formatter={(val: any) => [formatCurrency(Number(val), { compact: false, decimals: 2 }), 'Revenue']}
                   contentStyle={{
                     backgroundColor: '#0f172a',
                     borderColor: '#334155',
@@ -407,11 +404,11 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
                   stroke="#94a3b8"
                   fontSize={11}
                   tickLine={false}
-                  tickFormatter={(v) => `$${(v / 1000000).toFixed(1)}M`}
+                  tickFormatter={(v) => formatCurrency(v, { compact: true })}
                 />
                 <YAxis type="category" dataKey="state" stroke="#94a3b8" fontSize={11} tickLine={false} />
                 <Tooltip
-                  formatter={(val: any) => [`$${(Number(val) / 1000000).toFixed(2)}M`, 'Revenue']}
+                  formatter={(val: any) => [formatCurrency(Number(val), { compact: false, decimals: 2 }), 'Revenue']}
                   contentStyle={{
                     backgroundColor: '#0f172a',
                     borderColor: '#334155',
@@ -456,7 +453,7 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
                 </div>
                 <div className="text-right shrink-0">
                   <div className="text-xs font-bold text-slate-900 dark:text-white">
-                    ${(p.revenue / 1000).toFixed(1)}k
+                    {formatCurrency(p.revenue, { compact: true })}
                   </div>
                   <span className="text-[10px] text-emerald-600 font-medium">
                     {(p.margin * 100).toFixed(0)}% margin
