@@ -1,6 +1,8 @@
 import React from 'react';
-import { Menu, RefreshCw, Filter, Clock } from 'lucide-react';
-import type { FilterState } from '../../types';
+import { useNavigate } from 'react-router-dom';
+import { Menu, RefreshCw, Filter, Clock, ArrowLeft } from 'lucide-react';
+import { CompanySwitcher } from '../common/CompanySwitcher';
+import type { FilterState, CompanyMetadata } from '../../types';
 
 interface HeaderProps {
   title: string;
@@ -10,6 +12,8 @@ interface HeaderProps {
   isRefreshing: boolean;
   filters: FilterState;
   lastUpdated: string;
+  currentCompanyId?: string;
+  onCompanyChange?: (company: CompanyMetadata) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -20,7 +24,11 @@ export const Header: React.FC<HeaderProps> = ({
   isRefreshing,
   filters,
   lastUpdated,
+  currentCompanyId,
+  onCompanyChange,
 }) => {
+  const navigate = useNavigate();
+
   // Count active non-default filters
   const activeFilterCount = [
     filters.category && filters.category !== 'All' ? `Cat: ${filters.category}` : null,
@@ -33,7 +41,7 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="sticky top-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors">
       <div className="px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-        {/* Left Side: Mobile Menu & Titles */}
+        {/* Left Side: Mobile Menu, Back to Home & Company Switcher */}
         <div className="flex items-center space-x-3">
           <button
             onClick={onOpenSidebar}
@@ -42,12 +50,29 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <Menu size={22} />
           </button>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+
+          {/* Back to Home / Company Catalog */}
+          <button
+            onClick={() => navigate('/')}
+            className="p-2 rounded-xl text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Return to Companies Catalog"
+            aria-label="Return to Companies Catalog"
+          >
+            <ArrowLeft size={18} />
+          </button>
+
+          {/* Company Switcher Dropdown */}
+          <CompanySwitcher
+            currentCompanyId={currentCompanyId}
+            onCompanyChange={onCompanyChange}
+          />
+
+          <div className="hidden sm:block border-l border-slate-200 dark:border-slate-800 pl-3">
+            <h1 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
               {title}
             </h1>
             {subtitle && (
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">
                 {subtitle}
               </p>
             )}
@@ -102,3 +127,5 @@ export const Header: React.FC<HeaderProps> = ({
     </header>
   );
 };
+
+export default Header;

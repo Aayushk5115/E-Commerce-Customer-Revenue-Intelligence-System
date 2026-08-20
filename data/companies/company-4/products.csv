@@ -1,0 +1,201 @@
+product_id,product_name,category,subcategory,brand,unit_cost,selling_price,stock_quantity
+522,Kitchen Product 522,Home & Garden,Kitchen,Brand 74,830.06,1312.45,183
+738,Skincare Product 738,Beauty,Skincare,Brand 50,74.4,161.22,723
+741,Fitness Product 741,Sports,Fitness,Brand 96,77.71,114.36,574
+661,Pants Product 661,Apparel,Pants,Brand 35,134.77,339.74,717
+412,Pants Product 412,Apparel,Pants,Brand 72,91.51,176.85,655
+679,Smartphones Product 679,Electronics,Smartphones,Brand 16,954.99,1109.05,938
+627,Makeup Product 627,Beauty,Makeup,Brand 22,23.97,48.69,703
+514,Fitness Product 514,Sports,Fitness,Brand 17,496.32,792.1,768
+860,Skincare Product 860,Beauty,Skincare,Brand 41,85.56,220.15,554
+137,Accessories Product 137,Electronics,Accessories,Brand 29,1220.51,1645.22,844
+812,Laptops Product 812,Electronics,Laptops,Brand 15,840.94,1008.38,543
+77,Furniture Product 77,Home & Garden,Furniture,Brand 40,722.56,1129.11,732
+637,Accessories Product 637,Electronics,Accessories,Brand 28,362.3,515.27,877
+974,Accessories Product 974,Electronics,Accessories,Brand 6,1174.35,1530.51,311
+939,Laptops Product 939,Electronics,Laptops,Brand 68,1072.69,1244.26,722
+900,Fitness Product 900,Sports,Fitness,Brand 31,138.86,194.06,579
+281,Fitness Product 281,Sports,Fitness,Brand 58,473.74,626.98,955
+884,Shoes Product 884,Apparel,Shoes,Brand 11,188.98,484.82,265
+762,Skincare Product 762,Beauty,Skincare,Brand 12,44.51,131.34,407
+320,Tools Product 320,Home & Garden,Tools,Brand 79,805.63,1366.24,955
+550,Audio Product 550,Electronics,Audio,Brand 31,1403.38,1861.23,109
+175,Skincare Product 175,Beauty,Skincare,Brand 88,63.66,148.2,993
+372,Fitness Product 372,Sports,Fitness,Brand 71,343.78,445.02,211
+528,Accessories Product 528,Electronics,Accessories,Brand 97,1258.7,1667.59,289
+211,Decor Product 211,Home & Garden,Decor,Brand 17,118.83,225.61,65
+236,Skincare Product 236,Beauty,Skincare,Brand 85,69.03,165.0,484
+102,Tools Product 102,Home & Garden,Tools,Brand 17,726.94,1366.69,687
+987,Makeup Product 987,Beauty,Makeup,Brand 84,47.67,103.53,191
+903,Accessories Product 903,Electronics,Accessories,Brand 80,1243.1,1470.13,553
+948,Decor Product 948,Home & Garden,Decor,Brand 99,222.67,349.55,891
+347,Furniture Product 347,Home & Garden,Furniture,Brand 48,137.38,201.83,863
+140,Shoes Product 140,Apparel,Shoes,Brand 23,137.18,248.12,615
+622,Accessories Product 622,Electronics,Accessories,Brand 56,1886.04,2175.36,210
+500,Audio Product 500,Electronics,Audio,Brand 25,1904.65,2371.69,884
+371,Skincare Product 371,Beauty,Skincare,Brand 53,65.6,135.47,388
+199,Skincare Product 199,Beauty,Skincare,Brand 60,66.53,215.04,981
+688,Shoes Product 688,Apparel,Shoes,Brand 65,72.74,127.8,652
+585,Makeup Product 585,Beauty,Makeup,Brand 9,92.16,193.0,252
+902,Tools Product 902,Home & Garden,Tools,Brand 18,196.12,285.76,346
+60,Decor Product 60,Home & Garden,Decor,Brand 55,743.82,1261.43,624
+329,Haircare Product 329,Beauty,Haircare,Brand 93,19.65,64.98,973
+97,Outdoor Product 97,Sports,Outdoor,Brand 8,172.13,243.53,261
+313,Makeup Product 313,Beauty,Makeup,Brand 100,91.79,197.54,316
+975,Shirts Product 975,Apparel,Shirts,Brand 80,67.54,185.94,327
+300,Audio Product 300,Electronics,Audio,Brand 56,560.97,757.93,960
+278,Pants Product 278,Apparel,Pants,Brand 62,176.51,302.06,945
+925,Outdoor Product 925,Sports,Outdoor,Brand 71,435.15,639.68,214
+602,Shirts Product 602,Apparel,Shirts,Brand 79,112.39,187.38,256
+440,Kitchen Product 440,Home & Garden,Kitchen,Brand 52,796.99,1164.86,520
+838,Shoes Product 838,Apparel,Shoes,Brand 50,29.81,50.64,460
+571,Furniture Product 571,Home & Garden,Furniture,Brand 67,53.46,81.78,472
+880,Shoes Product 880,Apparel,Shoes,Brand 52,93.04,223.49,919
+262,Tools Product 262,Home & Garden,Tools,Brand 77,414.68,655.8,103
+579,Furniture Product 579,Home & Garden,Furniture,Brand 19,222.87,421.56,143
+24,Haircare Product 24,Beauty,Haircare,Brand 21,23.9,61.63,602
+31,Audio Product 31,Electronics,Audio,Brand 76,61.65,78.12,275
+618,Haircare Product 618,Beauty,Haircare,Brand 58,77.03,178.18,125
+11,Kitchen Product 11,Home & Garden,Kitchen,Brand 88,217.41,336.23,713
+222,Kitchen Product 222,Home & Garden,Kitchen,Brand 61,380.56,568.45,118
+821,Shirts Product 821,Apparel,Shirts,Brand 65,18.06,40.75,750
+297,Fitness Product 297,Sports,Fitness,Brand 26,153.79,194.37,957
+55,Skincare Product 55,Beauty,Skincare,Brand 85,68.45,205.17,156
+543,Audio Product 543,Electronics,Audio,Brand 73,1869.17,2139.61,480
+210,Shirts Product 210,Apparel,Shirts,Brand 17,66.3,217.53,603
+605,Makeup Product 605,Beauty,Makeup,Brand 85,96.25,248.12,455
+693,Haircare Product 693,Beauty,Haircare,Brand 84,21.05,53.97,861
+663,Accessories Product 663,Electronics,Accessories,Brand 77,1824.8,2368.25,870
+867,Makeup Product 867,Beauty,Makeup,Brand 27,39.76,113.48,479
+71,Kitchen Product 71,Home & Garden,Kitchen,Brand 69,645.07,1040.33,389
+544,Decor Product 544,Home & Garden,Decor,Brand 99,765.1,1502.82,124
+108,Smartphones Product 108,Electronics,Smartphones,Brand 26,1513.38,2131.29,909
+494,Team Sports Product 494,Sports,Team Sports,Brand 39,94.54,142.11,990
+591,Makeup Product 591,Beauty,Makeup,Brand 18,10.79,25.93,479
+742,Kitchen Product 742,Home & Garden,Kitchen,Brand 81,714.76,1393.57,272
+293,Kitchen Product 293,Home & Garden,Kitchen,Brand 9,749.84,1192.91,403
+290,Pants Product 290,Apparel,Pants,Brand 46,68.89,114.91,296
+653,Makeup Product 653,Beauty,Makeup,Brand 21,83.0,240.29,117
+40,Smartphones Product 40,Electronics,Smartphones,Brand 31,1938.61,2712.38,220
+590,Haircare Product 590,Beauty,Haircare,Brand 64,63.61,208.0,471
+308,Shirts Product 308,Apparel,Shirts,Brand 57,41.41,99.13,85
+680,Team Sports Product 680,Sports,Team Sports,Brand 20,156.19,197.91,190
+67,Tools Product 67,Home & Garden,Tools,Brand 32,804.21,1525.47,323
+276,Shoes Product 276,Apparel,Shoes,Brand 57,140.49,327.58,522
+68,Shirts Product 68,Apparel,Shirts,Brand 61,85.77,145.77,277
+319,Pants Product 319,Apparel,Pants,Brand 71,161.22,272.28,636
+549,Shoes Product 549,Apparel,Shoes,Brand 84,87.29,213.05,747
+999,Tools Product 999,Home & Garden,Tools,Brand 26,230.33,407.14,825
+715,Outerwear Product 715,Apparel,Outerwear,Brand 53,185.27,327.26,501
+754,Fitness Product 754,Sports,Fitness,Brand 83,456.63,692.84,426
+328,Shoes Product 328,Apparel,Shoes,Brand 83,128.67,224.96,222
+383,Team Sports Product 383,Sports,Team Sports,Brand 13,170.68,237.11,239
+452,Audio Product 452,Electronics,Audio,Brand 30,1571.43,1940.3,414
+523,Makeup Product 523,Beauty,Makeup,Brand 98,79.89,344.72,99
+219,Tools Product 219,Home & Garden,Tools,Brand 90,510.5,831.49,167
+788,Makeup Product 788,Beauty,Makeup,Brand 86,95.4,242.84,721
+437,Fitness Product 437,Sports,Fitness,Brand 69,18.2,27.76,343
+765,Smartphones Product 765,Electronics,Smartphones,Brand 83,1344.5,1658.1,678
+89,Laptops Product 89,Electronics,Laptops,Brand 18,1836.59,2097.21,870
+64,Decor Product 64,Home & Garden,Decor,Brand 46,685.25,1209.38,848
+827,Audio Product 827,Electronics,Audio,Brand 33,1204.62,1522.42,243
+717,Haircare Product 717,Beauty,Haircare,Brand 86,59.78,180.88,944
+352,Kitchen Product 352,Home & Garden,Kitchen,Brand 63,512.24,856.51,775
+937,Furniture Product 937,Home & Garden,Furniture,Brand 6,825.41,1276.07,801
+257,Haircare Product 257,Beauty,Haircare,Brand 95,41.53,127.43,967
+636,Haircare Product 636,Beauty,Haircare,Brand 80,81.04,273.1,200
+645,Outdoor Product 645,Sports,Outdoor,Brand 78,197.69,281.26,534
+555,Furniture Product 555,Home & Garden,Furniture,Brand 55,773.72,1114.66,328
+960,Fitness Product 960,Sports,Fitness,Brand 74,74.77,95.43,813
+169,Team Sports Product 169,Sports,Team Sports,Brand 85,457.58,632.23,861
+918,Skincare Product 918,Beauty,Skincare,Brand 21,40.28,85.13,561
+529,Team Sports Product 529,Sports,Team Sports,Brand 28,54.69,70.03,538
+824,Accessories Product 824,Electronics,Accessories,Brand 6,1053.65,1275.72,764
+986,Outerwear Product 986,Apparel,Outerwear,Brand 40,59.47,107.31,981
+817,Furniture Product 817,Home & Garden,Furniture,Brand 61,224.43,387.82,938
+87,Shirts Product 87,Apparel,Shirts,Brand 14,180.14,526.93,847
+433,Haircare Product 433,Beauty,Haircare,Brand 10,95.94,279.86,887
+185,Team Sports Product 185,Sports,Team Sports,Brand 90,185.89,250.92,352
+979,Haircare Product 979,Beauty,Haircare,Brand 59,13.36,30.34,624
+535,Outerwear Product 535,Apparel,Outerwear,Brand 96,79.97,149.17,205
+295,Audio Product 295,Electronics,Audio,Brand 23,1101.11,1493.44,900
+893,Haircare Product 893,Beauty,Haircare,Brand 45,65.76,161.53,543
+426,Accessories Product 426,Electronics,Accessories,Brand 27,1528.03,1827.89,429
+714,Skincare Product 714,Beauty,Skincare,Brand 94,86.94,368.37,963
+261,Outdoor Product 261,Sports,Outdoor,Brand 47,266.79,393.47,431
+238,Audio Product 238,Electronics,Audio,Brand 87,871.23,1033.06,657
+560,Accessories Product 560,Electronics,Accessories,Brand 23,740.67,1034.52,928
+584,Outdoor Product 584,Sports,Outdoor,Brand 11,346.28,565.37,646
+446,Furniture Product 446,Home & Garden,Furniture,Brand 3,187.56,353.94,262
+868,Kitchen Product 868,Home & Garden,Kitchen,Brand 24,855.78,1328.7,635
+801,Accessories Product 801,Electronics,Accessories,Brand 31,740.45,824.66,918
+600,Decor Product 600,Home & Garden,Decor,Brand 64,567.48,856.76,605
+850,Outdoor Product 850,Sports,Outdoor,Brand 97,285.95,442.64,397
+266,Haircare Product 266,Beauty,Haircare,Brand 49,94.11,231.16,708
+996,Fitness Product 996,Sports,Fitness,Brand 92,256.14,377.2,715
+530,Laptops Product 530,Electronics,Laptops,Brand 57,1195.49,1501.66,59
+56,Shoes Product 56,Apparel,Shoes,Brand 71,36.35,64.01,209
+121,Decor Product 121,Home & Garden,Decor,Brand 34,492.67,783.22,398
+216,Outdoor Product 216,Sports,Outdoor,Brand 57,346.19,493.19,125
+26,Decor Product 26,Home & Garden,Decor,Brand 11,67.35,128.43,137
+73,Smartphones Product 73,Electronics,Smartphones,Brand 41,1201.21,1445.74,496
+45,Skincare Product 45,Beauty,Skincare,Brand 75,76.06,157.52,538
+248,Kitchen Product 248,Home & Garden,Kitchen,Brand 10,229.36,421.48,572
+722,Laptops Product 722,Electronics,Laptops,Brand 31,1109.98,1346.62,130
+282,Furniture Product 282,Home & Garden,Furniture,Brand 48,420.75,677.85,291
+894,Skincare Product 894,Beauty,Skincare,Brand 47,81.45,221.67,472
+915,Laptops Product 915,Electronics,Laptops,Brand 56,1947.08,2283.14,382
+811,Decor Product 811,Home & Garden,Decor,Brand 78,158.74,237.45,784
+245,Outdoor Product 245,Sports,Outdoor,Brand 42,66.43,83.47,225
+823,Smartphones Product 823,Electronics,Smartphones,Brand 78,204.52,266.26,602
+322,Makeup Product 322,Beauty,Makeup,Brand 10,78.07,308.58,178
+644,Smartphones Product 644,Electronics,Smartphones,Brand 45,1575.78,2168.99,948
+159,Shoes Product 159,Apparel,Shoes,Brand 12,116.91,269.18,280
+978,Outerwear Product 978,Apparel,Outerwear,Brand 41,109.08,281.79,546
+430,Outerwear Product 430,Apparel,Outerwear,Brand 44,116.87,368.72,313
+942,Laptops Product 942,Electronics,Laptops,Brand 65,1589.07,2011.46,395
+463,Tools Product 463,Home & Garden,Tools,Brand 32,784.84,1250.19,788
+310,Skincare Product 310,Beauty,Skincare,Brand 48,62.48,210.88,430
+698,Audio Product 698,Electronics,Audio,Brand 54,1253.14,1649.18,900
+61,Smartphones Product 61,Electronics,Smartphones,Brand 20,168.98,233.6,608
+885,Outerwear Product 885,Apparel,Outerwear,Brand 61,34.06,58.64,611
+596,Skincare Product 596,Beauty,Skincare,Brand 85,97.53,207.53,296
+768,Makeup Product 768,Beauty,Makeup,Brand 63,53.86,155.05,94
+650,Laptops Product 650,Electronics,Laptops,Brand 57,286.08,405.7,842
+651,Kitchen Product 651,Home & Garden,Kitchen,Brand 12,731.51,1263.39,242
+866,Kitchen Product 866,Home & Garden,Kitchen,Brand 35,195.28,301.62,532
+669,Kitchen Product 669,Home & Garden,Kitchen,Brand 34,644.19,1220.75,721
+299,Furniture Product 299,Home & Garden,Furniture,Brand 46,755.76,1142.01,932
+690,Haircare Product 690,Beauty,Haircare,Brand 88,54.79,148.12,187
+315,Laptops Product 315,Electronics,Laptops,Brand 92,1708.6,2110.45,505
+311,Fitness Product 311,Sports,Fitness,Brand 51,291.22,419.56,371
+362,Makeup Product 362,Beauty,Makeup,Brand 88,69.21,288.73,708
+480,Haircare Product 480,Beauty,Haircare,Brand 58,60.15,183.7,433
+111,Haircare Product 111,Beauty,Haircare,Brand 21,73.24,274.65,368
+990,Skincare Product 990,Beauty,Skincare,Brand 93,35.16,105.65,171
+487,Skincare Product 487,Beauty,Skincare,Brand 55,57.43,143.32,523
+364,Shoes Product 364,Apparel,Shoes,Brand 89,157.67,405.81,771
+255,Audio Product 255,Electronics,Audio,Brand 58,1024.53,1222.71,88
+260,Furniture Product 260,Home & Garden,Furniture,Brand 32,509.5,765.6,774
+803,Pants Product 803,Apparel,Pants,Brand 46,151.15,332.24,91
+678,Kitchen Product 678,Home & Garden,Kitchen,Brand 16,267.95,417.89,531
+495,Haircare Product 495,Beauty,Haircare,Brand 16,13.05,28.38,294
+671,Makeup Product 671,Beauty,Makeup,Brand 93,67.75,229.06,76
+378,Smartphones Product 378,Electronics,Smartphones,Brand 43,610.82,783.66,341
+527,Kitchen Product 527,Home & Garden,Kitchen,Brand 84,91.6,161.52,219
+846,Makeup Product 846,Beauty,Makeup,Brand 29,38.01,148.86,670
+138,Makeup Product 138,Beauty,Makeup,Brand 76,47.8,130.18,489
+356,Skincare Product 356,Beauty,Skincare,Brand 22,73.53,226.29,586
+366,Furniture Product 366,Home & Garden,Furniture,Brand 51,577.74,976.97,888
+943,Outerwear Product 943,Apparel,Outerwear,Brand 71,187.7,570.08,382
+750,Skincare Product 750,Beauty,Skincare,Brand 79,39.07,107.27,938
+949,Decor Product 949,Home & Garden,Decor,Brand 20,103.34,169.99,191
+830,Makeup Product 830,Beauty,Makeup,Brand 73,29.82,87.92,424
+657,Tools Product 657,Home & Garden,Tools,Brand 16,510.08,890.32,747
+200,Tools Product 200,Home & Garden,Tools,Brand 5,125.51,181.65,361
+214,Furniture Product 214,Home & Garden,Furniture,Brand 79,457.49,697.72,94
+409,Outdoor Product 409,Sports,Outdoor,Brand 100,124.83,165.0,107
+333,Fitness Product 333,Sports,Fitness,Brand 39,404.3,609.8,514
+209,Laptops Product 209,Electronics,Laptops,Brand 30,1181.04,1601.65,386
+614,Tools Product 614,Home & Garden,Tools,Brand 89,21.28,32.34,119
+79,Team Sports Product 79,Sports,Team Sports,Brand 23,470.78,708.43,680

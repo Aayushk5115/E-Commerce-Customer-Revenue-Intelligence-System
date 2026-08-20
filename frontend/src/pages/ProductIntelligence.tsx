@@ -26,6 +26,7 @@ import { KpiCard } from '../components/common/KpiCard';
 import { DataTable } from '../components/common/DataTable';
 import type { ColumnDef } from '../components/common/DataTable';
 import { PerformanceMatrix } from '../components/common/PerformanceMatrix';
+import { useParams } from 'react-router-dom';
 import {
   fetchProductKpis,
   fetchProductPerformance,
@@ -42,12 +43,17 @@ import type {
 interface ProductIntelligenceProps {
   filterOptions: FilterOptions | null;
   filters: FilterState;
+  companyId?: string;
 }
 
 export const ProductIntelligence: React.FC<ProductIntelligenceProps> = ({
   filterOptions,
   filters,
+  companyId: propCompanyId,
 }) => {
+  const params = useParams<{ companyId?: string }>();
+  const activeCompanyId = propCompanyId || params.companyId || 'company-1';
+
   const [kpis, setKpis] = useState<ProductKpis | null>(null);
   const [perf, setPerf] = useState<ProductPerformance | null>(null);
 
@@ -69,8 +75,8 @@ export const ProductIntelligence: React.FC<ProductIntelligenceProps> = ({
     const loadOverview = async () => {
       try {
         const [kpiRes, perfRes] = await Promise.all([
-          fetchProductKpis(filters, selectedBrand),
-          fetchProductPerformance(filters, selectedBrand),
+          fetchProductKpis(activeCompanyId, filters, selectedBrand),
+          fetchProductPerformance(activeCompanyId, filters, selectedBrand),
         ]);
         setKpis(kpiRes);
         setPerf(perfRes);
@@ -80,7 +86,7 @@ export const ProductIntelligence: React.FC<ProductIntelligenceProps> = ({
     };
 
     loadOverview();
-  }, [filters, selectedBrand]);
+  }, [activeCompanyId, filters, selectedBrand]);
 
   // Load Paginated Product Table
   useEffect(() => {
@@ -89,6 +95,7 @@ export const ProductIntelligence: React.FC<ProductIntelligenceProps> = ({
       setIsTableLoading(true);
       try {
         const res = await fetchProductsTable(
+          activeCompanyId,
           currentPage,
           pageSize,
           searchValue,
@@ -113,7 +120,16 @@ export const ProductIntelligence: React.FC<ProductIntelligenceProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [currentPage, pageSize, searchValue, selectedCategory, selectedBrand, sortBy, sortOrder]);
+  }, [
+    activeCompanyId,
+    currentPage,
+    pageSize,
+    searchValue,
+    selectedCategory,
+    selectedBrand,
+    sortBy,
+    sortOrder,
+  ]);
 
   const handleSort = (columnKey: string) => {
     if (sortBy === columnKey) {

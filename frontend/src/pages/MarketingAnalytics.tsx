@@ -24,10 +24,18 @@ import {
 import { KpiCard } from '../components/common/KpiCard';
 import { DataTable } from '../components/common/DataTable';
 import type { ColumnDef } from '../components/common/DataTable';
+import { useParams } from 'react-router-dom';
 import { fetchMarketing } from '../services/api';
 import type { MarketingResponse, MarketingCampaignItem } from '../types';
 
-export const MarketingAnalytics: React.FC = () => {
+interface MarketingAnalyticsProps {
+  companyId?: string;
+}
+
+export const MarketingAnalytics: React.FC<MarketingAnalyticsProps> = ({ companyId: propCompanyId }) => {
+  const params = useParams<{ companyId?: string }>();
+  const activeCompanyId = propCompanyId || params.companyId || 'company-1';
+
   const [data, setData] = useState<MarketingResponse | null>(null);
   const [searchValue, setSearchValue] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('revenue');
@@ -41,7 +49,7 @@ export const MarketingAnalytics: React.FC = () => {
     const loadMarketing = async () => {
       setIsLoading(true);
       try {
-        const res = await fetchMarketing();
+        const res = await fetchMarketing(activeCompanyId);
         if (isMounted) {
           setData(res);
         }
@@ -56,7 +64,7 @@ export const MarketingAnalytics: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [activeCompanyId]);
 
   const campaigns = data?.campaigns || [];
   const filteredCampaigns = campaigns.filter((c) => {

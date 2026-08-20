@@ -1,60 +1,61 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, useParams, Navigate } from 'react-router-dom';
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
+import { HomePage } from './pages/HomePage';
 import { ExecutiveOverview } from './pages/ExecutiveOverview';
 import { CustomerIntelligence } from './pages/CustomerIntelligence';
 import { ProductIntelligence } from './pages/ProductIntelligence';
 import { MarketingAnalytics } from './pages/MarketingAnalytics';
 import { Forecasting } from './pages/Forecasting';
 import { BusinessInsights } from './pages/BusinessInsights';
-import { fetchFilterOptions } from './services/api';
-import type { FilterOptions, FilterState } from './types';
+import { fetchFilterOptions, fetchCompanyDetail } from './services/api';
+import type { FilterOptions, FilterState, CompanyMetadata } from './types';
 
 // Page Title Mapping Helper
-const getPageMeta = (pathname: string) => {
-  switch (pathname) {
-    case '/':
-      return {
-        title: 'Executive Financial & Revenue Overview',
-        subtitle: 'High-level business KPIs, growth trajectories, category breakdown, and customer segment health.',
-      };
-    case '/customers':
-      return {
-        title: 'Customer Intelligence & Churn Analytics',
-        subtitle: 'RFM segmentation, machine learning churn risk scoring, CLV distribution, and cohort retention.',
-      };
-    case '/products':
-      return {
-        title: 'Product & Merchandise Intelligence',
-        subtitle: 'Category profitability, top SKU sales, return rate diagnostics, and 2x2 portfolio performance matrix.',
-      };
-    case '/marketing':
-      return {
-        title: 'Marketing & Acquisition Analytics',
-        subtitle: 'Cross-channel ROAS, customer acquisition costs (CAC), conversion funnels, and campaign performance.',
-      };
-    case '/forecast':
-      return {
-        title: 'Predictive Revenue Forecasting (ARIMA)',
-        subtitle: 'Time-series predictive modeling with 95% confidence intervals and multi-horizon growth projections.',
-      };
-    case '/insights':
-      return {
-        title: 'Dynamic Business Insights & Prescriptive Engine',
-        subtitle: 'Automated rules-driven findings, actionable recommendations, and estimated revenue impact.',
-      };
-    default:
-      return {
-        title: 'E-Commerce Intelligence Platform',
-        subtitle: 'Real-time analytics and predictive data platform.',
-      };
+const getPageMeta = (pathname: string, companyName?: string) => {
+  const compPrefix = companyName ? `${companyName} • ` : '';
+  if (pathname.includes('/customers')) {
+    return {
+      title: `${compPrefix}Customer Intelligence & Churn Analytics`,
+      subtitle: 'RFM segmentation, machine learning churn risk scoring, CLV distribution, and cohort retention.',
+    };
   }
+  if (pathname.includes('/products')) {
+    return {
+      title: `${compPrefix}Product & Merchandise Intelligence`,
+      subtitle: 'Category profitability, top SKU sales, return rate diagnostics, and 2x2 portfolio performance matrix.',
+    };
+  }
+  if (pathname.includes('/marketing')) {
+    return {
+      title: `${compPrefix}Marketing & Acquisition Analytics`,
+      subtitle: 'Cross-channel ROAS, customer acquisition costs (CAC), conversion funnels, and campaign performance.',
+    };
+  }
+  if (pathname.includes('/forecast')) {
+    return {
+      title: `${compPrefix}Predictive Revenue Forecasting (ARIMA)`,
+      subtitle: 'Time-series predictive modeling with 95% confidence intervals and multi-horizon growth projections.',
+    };
+  }
+  if (pathname.includes('/insights')) {
+    return {
+      title: `${compPrefix}Dynamic Business Insights & Prescriptive Engine`,
+      subtitle: 'Automated rules-driven findings, actionable recommendations, and estimated revenue impact.',
+    };
+  }
+  return {
+    title: `${compPrefix}Executive Financial & Revenue Overview`,
+    subtitle: 'High-level business KPIs, growth trajectories, category breakdown, and customer segment health.',
+  };
 };
 
-const MainLayout: React.FC = () => {
+const CompanyDashboardLayout: React.FC = () => {
+  const { companyId = 'company-1' } = useParams<{ companyId: string }>();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
+  const [company, setCompany] = useState<CompanyMetadata | null>(null);
   const [filterOptions, setFilterOptions] = useState<FilterOptions | null>(null);
   const [filters, setFilters] = useState<FilterState>({
     datePreset: 'all',
@@ -66,9 +67,16 @@ const MainLayout: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [lastUpdated, setLastUpdated] = useState<string>(new Date().toLocaleTimeString());
 
-  // Load initial filter limits and options
+  // Fetch company metadata
   useEffect(() => {
-    fetchFilterOptions()
+    fetchCompanyDetail(companyId)
+      .then((c) => setCompany(c))
+      .catch((err) => console.error('Failed to load company detail:', err));
+  }, [companyId]);
+
+  // Load filter limits and options for active company
+  useEffect(() => {
+    fetchFilterOptions(companyId)
       .then((opts) => {
         setFilterOptions(opts);
         setFilters((prev) => ({
@@ -78,11 +86,10 @@ const MainLayout: React.FC = () => {
         }));
       })
       .catch((err) => console.error('Failed to load filter options:', err));
-  }, []);
+  }, [companyId]);
 
   const handleRefresh = () => {
     setIsRefreshing(true);
-    // Trigger re-render of active components via filter clone or timestamp
     setFilters((prev) => ({ ...prev }));
     setTimeout(() => {
       setLastUpdated(new Date().toLocaleTimeString());
@@ -104,16 +111,20 @@ const MainLayout: React.FC = () => {
     }
   };
 
-  const meta = getPageMeta(location.pathname);
+  const meta = getPageMeta(location.pathname, company?.company_name);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col antialiased">
       {/* Sidebar Navigation */}
-      <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
+      <Sidebar
+        isOpen={sidebarOpen}
+        setIsOpen={setSidebarOpen}
+        currentCompanyId={companyId}
+      />
 
       {/* Main Content Area */}
       <div className="lg:pl-72 flex flex-col flex-1 min-w-0">
-        {/* Sticky Header */}
+        {/* Sticky Header with Company Switcher */}
         <Header
           title={meta.title}
           subtitle={meta.subtitle}
@@ -122,9 +133,11 @@ const MainLayout: React.FC = () => {
           isRefreshing={isRefreshing}
           filters={filters}
           lastUpdated={lastUpdated}
+          currentCompanyId={companyId}
+          onCompanyChange={(c) => setCompany(c)}
         />
 
-        {/* Page Body */}
+        {/* Company Analytics Sub-modules */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
           <Routes>
             <Route
@@ -135,12 +148,13 @@ const MainLayout: React.FC = () => {
                   filters={filters}
                   onFilterChange={setFilters}
                   onResetFilters={handleResetFilters}
+                  companyId={companyId}
                 />
               }
             />
             <Route
               path="/customers"
-              element={<CustomerIntelligence filters={filters} />}
+              element={<CustomerIntelligence filters={filters} companyId={companyId} />}
             />
             <Route
               path="/products"
@@ -148,13 +162,22 @@ const MainLayout: React.FC = () => {
                 <ProductIntelligence
                   filterOptions={filterOptions}
                   filters={filters}
+                  companyId={companyId}
                 />
               }
             />
-            <Route path="/marketing" element={<MarketingAnalytics />} />
-            <Route path="/forecast" element={<Forecasting />} />
-            <Route path="/insights" element={<BusinessInsights filters={filters} />} />
-            {/* Catch-all redirect to Executive Overview */}
+            <Route
+              path="/marketing"
+              element={<MarketingAnalytics companyId={companyId} />}
+            />
+            <Route
+              path="/forecast"
+              element={<Forecasting companyId={companyId} />}
+            />
+            <Route
+              path="/insights"
+              element={<BusinessInsights filters={filters} companyId={companyId} />}
+            />
             <Route
               path="*"
               element={
@@ -163,6 +186,7 @@ const MainLayout: React.FC = () => {
                   filters={filters}
                   onFilterChange={setFilters}
                   onResetFilters={handleResetFilters}
+                  companyId={companyId}
                 />
               }
             />
@@ -176,7 +200,23 @@ const MainLayout: React.FC = () => {
 export default function App() {
   return (
     <Router>
-      <MainLayout />
+      <Routes>
+        {/* Public Home Page - Company Catalog & Platform Overview */}
+        <Route path="/" element={<HomePage />} />
+
+        {/* Company-Specific Analytics Dashboard Route */}
+        <Route path="/company/:companyId/*" element={<CompanyDashboardLayout />} />
+
+        {/* Legacy route redirects for backward compatibility */}
+        <Route path="/customers" element={<Navigate to="/company/company-1/customers" replace />} />
+        <Route path="/products" element={<Navigate to="/company/company-1/products" replace />} />
+        <Route path="/marketing" element={<Navigate to="/company/company-1/marketing" replace />} />
+        <Route path="/forecast" element={<Navigate to="/company/company-1/forecast" replace />} />
+        <Route path="/insights" element={<Navigate to="/company/company-1/insights" replace />} />
+
+        {/* Catch-all redirect to Home Page */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </Router>
   );
 }

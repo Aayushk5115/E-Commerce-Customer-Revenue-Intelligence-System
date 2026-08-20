@@ -25,6 +25,7 @@ import {
 } from 'recharts';
 import { KpiCard } from '../components/common/KpiCard';
 import { GlobalFilterBar } from '../components/common/GlobalFilterBar';
+import { useParams } from 'react-router-dom';
 import {
   fetchExecutiveKpis,
   fetchRevenueTrend,
@@ -49,6 +50,7 @@ interface ExecutiveOverviewProps {
   filters: FilterState;
   onFilterChange: (filters: FilterState) => void;
   onResetFilters: () => void;
+  companyId?: string;
 }
 
 export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
@@ -56,7 +58,11 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
   filters,
   onFilterChange,
   onResetFilters,
+  companyId: propCompanyId,
 }) => {
+  const params = useParams<{ companyId?: string }>();
+  const activeCompanyId = propCompanyId || params.companyId || 'company-1';
+
   const [kpis, setKpis] = useState<ExecutiveKpis | null>(null);
   const [trend, setTrend] = useState<RevenueTrendItem[]>([]);
   const [categoryData, setCategoryData] = useState<CategoryRevenueItem[]>([]);
@@ -69,12 +75,12 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
     const loadAll = async () => {
       try {
         const [kpiRes, trendRes, catRes, regRes, topProdRes, segRes] = await Promise.all([
-          fetchExecutiveKpis(filters),
-          fetchRevenueTrend(filters),
-          fetchRevenueByCategory(filters),
-          fetchRevenueByRegion(filters, 8),
-          fetchTopProducts(filters, 8),
-          fetchCustomerSegments(),
+          fetchExecutiveKpis(activeCompanyId, filters),
+          fetchRevenueTrend(activeCompanyId, filters),
+          fetchRevenueByCategory(activeCompanyId, filters),
+          fetchRevenueByRegion(activeCompanyId, filters, 8),
+          fetchTopProducts(activeCompanyId, filters, 8),
+          fetchCustomerSegments(activeCompanyId),
         ]);
         if (isMounted) {
           setKpis(kpiRes);
@@ -88,12 +94,11 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
         console.error('Error fetching Executive Overview:', err);
       }
     };
-
     loadAll();
     return () => {
       isMounted = false;
     };
-  }, [filters]);
+  }, [activeCompanyId, filters]);
 
   const CATEGORY_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
 

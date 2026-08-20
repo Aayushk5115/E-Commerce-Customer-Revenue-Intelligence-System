@@ -1,5 +1,6 @@
 import axios from 'axios';
 import type {
+  CompanyMetadata,
   FilterOptions,
   FilterState,
   ExecutiveKpis,
@@ -24,9 +25,7 @@ import type {
 
 const getBaseUrl = (): string => {
   let rawUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api').trim();
-  // Remove trailing slashes
   rawUrl = rawUrl.replace(/\/+$/, '');
-  // If the user provided URL without /api, append it automatically
   if (!rawUrl.endsWith('/api') && !rawUrl.includes('/api/')) {
     rawUrl = `${rawUrl}/api`;
   }
@@ -37,7 +36,7 @@ const API_BASE_URL = getBaseUrl();
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 60000, // 60 seconds to support Render free tier cold-start wakeups
+  timeout: 60000,
 });
 
 const buildParams = (filters?: FilterState) => {
@@ -54,66 +53,111 @@ const buildParams = (filters?: FilterState) => {
   return params;
 };
 
-export const fetchFilterOptions = async (): Promise<FilterOptions> => {
-  const res = await api.get<FilterOptions>('/filters');
+// ==========================================
+// 1. COMPANY REGISTRY & DISCOVERY
+// ==========================================
+export const fetchCompanies = async (): Promise<CompanyMetadata[]> => {
+  const res = await api.get<CompanyMetadata[]>('/companies');
   return res.data;
 };
 
-export const fetchExecutiveKpis = async (filters?: FilterState): Promise<ExecutiveKpis> => {
-  const res = await api.get<ExecutiveKpis>('/kpis', { params: buildParams(filters) });
+export const fetchCompanyDetail = async (companyId: string = 'company-1'): Promise<CompanyMetadata> => {
+  const res = await api.get<CompanyMetadata>(`/companies/${companyId}`);
   return res.data;
 };
 
-export const fetchRevenueTrend = async (filters?: FilterState): Promise<RevenueTrendItem[]> => {
-  const res = await api.get<RevenueTrendItem[]>('/revenue/trend', { params: buildParams(filters) });
+// ==========================================
+// 2. COMPANY-AWARE ANALYTICS APIs
+// ==========================================
+export const fetchFilterOptions = async (companyId: string = 'company-1'): Promise<FilterOptions> => {
+  const res = await api.get<FilterOptions>(`/companies/${companyId}/filters`);
   return res.data;
 };
 
-export const fetchRevenueByCategory = async (filters?: FilterState): Promise<CategoryRevenueItem[]> => {
-  const res = await api.get<CategoryRevenueItem[]>('/revenue/by-category', { params: buildParams(filters) });
+export const fetchExecutiveKpis = async (
+  companyId: string = 'company-1',
+  filters?: FilterState
+): Promise<ExecutiveKpis> => {
+  const res = await api.get<ExecutiveKpis>(`/companies/${companyId}/kpis`, { params: buildParams(filters) });
   return res.data;
 };
 
-export const fetchRevenueByRegion = async (filters?: FilterState, limit: number = 10): Promise<RegionRevenueItem[]> => {
-  const res = await api.get<RegionRevenueItem[]>('/revenue/by-region', {
+export const fetchRevenueTrend = async (
+  companyId: string = 'company-1',
+  filters?: FilterState
+): Promise<RevenueTrendItem[]> => {
+  const res = await api.get<RevenueTrendItem[]>(`/companies/${companyId}/revenue/trend`, {
+    params: buildParams(filters),
+  });
+  return res.data;
+};
+
+export const fetchRevenueByCategory = async (
+  companyId: string = 'company-1',
+  filters?: FilterState
+): Promise<CategoryRevenueItem[]> => {
+  const res = await api.get<CategoryRevenueItem[]>(`/companies/${companyId}/revenue/by-category`, {
+    params: buildParams(filters),
+  });
+  return res.data;
+};
+
+export const fetchRevenueByRegion = async (
+  companyId: string = 'company-1',
+  filters?: FilterState,
+  limit: number = 10
+): Promise<RegionRevenueItem[]> => {
+  const res = await api.get<RegionRevenueItem[]>(`/companies/${companyId}/revenue/by-region`, {
     params: { ...buildParams(filters), limit },
   });
   return res.data;
 };
 
-export const fetchTopProducts = async (filters?: FilterState, limit: number = 10): Promise<TopProductItem[]> => {
-  const res = await api.get<TopProductItem[]>('/revenue/top-products', {
+export const fetchTopProducts = async (
+  companyId: string = 'company-1',
+  filters?: FilterState,
+  limit: number = 10
+): Promise<TopProductItem[]> => {
+  const res = await api.get<TopProductItem[]>(`/companies/${companyId}/revenue/top-products`, {
     params: { ...buildParams(filters), limit },
   });
   return res.data;
 };
 
-export const fetchCustomerKpis = async (filters?: FilterState): Promise<CustomerKpis> => {
-  const res = await api.get<CustomerKpis>('/customers/kpis', { params: buildParams(filters) });
+export const fetchCustomerKpis = async (
+  companyId: string = 'company-1',
+  filters?: FilterState
+): Promise<CustomerKpis> => {
+  const res = await api.get<CustomerKpis>(`/companies/${companyId}/customers/kpis`, {
+    params: buildParams(filters),
+  });
   return res.data;
 };
 
-export const fetchCustomerSegments = async (): Promise<CustomerSegmentItem[]> => {
-  const res = await api.get<CustomerSegmentItem[]>('/customers/segments');
+export const fetchCustomerSegments = async (companyId: string = 'company-1'): Promise<CustomerSegmentItem[]> => {
+  const res = await api.get<CustomerSegmentItem[]>(`/companies/${companyId}/customers/segments`);
   return res.data;
 };
 
-export const fetchChurnAnalytics = async (): Promise<ChurnAnalytics> => {
-  const res = await api.get<ChurnAnalytics>('/customers/churn');
+export const fetchChurnAnalytics = async (companyId: string = 'company-1'): Promise<ChurnAnalytics> => {
+  const res = await api.get<ChurnAnalytics>(`/companies/${companyId}/customers/churn`);
   return res.data;
 };
 
-export const fetchClvDistribution = async (): Promise<ClvDistributionItem[]> => {
-  const res = await api.get<ClvDistributionItem[]>('/customers/clv-distribution');
+export const fetchClvDistribution = async (companyId: string = 'company-1'): Promise<ClvDistributionItem[]> => {
+  const res = await api.get<ClvDistributionItem[]>(`/companies/${companyId}/customers/clv`);
   return res.data;
 };
 
-export const fetchCustomerRetentionTrend = async (): Promise<CustomerRetentionItem[]> => {
-  const res = await api.get<CustomerRetentionItem[]>('/customers/retention-trend');
+export const fetchCustomerRetentionTrend = async (
+  companyId: string = 'company-1'
+): Promise<CustomerRetentionItem[]> => {
+  const res = await api.get<CustomerRetentionItem[]>(`/companies/${companyId}/customers/retention`);
   return res.data;
 };
 
 export const fetchCustomersTable = async (
+  companyId: string = 'company-1',
   page: number = 1,
   pageSize: number = 20,
   search?: string,
@@ -122,7 +166,7 @@ export const fetchCustomersTable = async (
   sortBy: string = 'total_spent',
   sortOrder: string = 'desc'
 ): Promise<CustomerTableResponse> => {
-  const res = await api.get<CustomerTableResponse>('/customers', {
+  const res = await api.get<CustomerTableResponse>(`/companies/${companyId}/customers`, {
     params: {
       page,
       page_size: pageSize,
@@ -136,21 +180,30 @@ export const fetchCustomersTable = async (
   return res.data;
 };
 
-export const fetchProductKpis = async (filters?: FilterState, brand?: string): Promise<ProductKpis> => {
-  const res = await api.get<ProductKpis>('/products/kpis', {
+export const fetchProductKpis = async (
+  companyId: string = 'company-1',
+  filters?: FilterState,
+  brand?: string
+): Promise<ProductKpis> => {
+  const res = await api.get<ProductKpis>(`/companies/${companyId}/products/kpis`, {
     params: { ...buildParams(filters), brand: brand !== 'All' ? brand : undefined },
   });
   return res.data;
 };
 
-export const fetchProductPerformance = async (filters?: FilterState, brand?: string): Promise<ProductPerformance> => {
-  const res = await api.get<ProductPerformance>('/products/performance', {
+export const fetchProductPerformance = async (
+  companyId: string = 'company-1',
+  filters?: FilterState,
+  brand?: string
+): Promise<ProductPerformance> => {
+  const res = await api.get<ProductPerformance>(`/companies/${companyId}/products/performance`, {
     params: { ...buildParams(filters), brand: brand !== 'All' ? brand : undefined },
   });
   return res.data;
 };
 
 export const fetchProductsTable = async (
+  companyId: string = 'company-1',
   page: number = 1,
   pageSize: number = 20,
   search?: string,
@@ -159,7 +212,7 @@ export const fetchProductsTable = async (
   sortBy: string = 'revenue',
   sortOrder: string = 'desc'
 ): Promise<ProductTableResponse> => {
-  const res = await api.get<ProductTableResponse>('/products', {
+  const res = await api.get<ProductTableResponse>(`/companies/${companyId}/products`, {
     params: {
       page,
       page_size: pageSize,
@@ -173,23 +226,31 @@ export const fetchProductsTable = async (
   return res.data;
 };
 
-export const fetchForecast = async (horizon: number = 6): Promise<ForecastResponse> => {
-  const res = await api.get<ForecastResponse>('/forecast', { params: { horizon } });
+export const fetchForecast = async (
+  companyId: string = 'company-1',
+  horizon: number = 6
+): Promise<ForecastResponse> => {
+  const res = await api.get<ForecastResponse>(`/companies/${companyId}/forecast`, { params: { horizon } });
   return res.data;
 };
 
-export const fetchCohorts = async (): Promise<CohortResponse> => {
-  const res = await api.get<CohortResponse>('/cohorts');
+export const fetchCohorts = async (companyId: string = 'company-1'): Promise<CohortResponse> => {
+  const res = await api.get<CohortResponse>(`/companies/${companyId}/cohorts`);
   return res.data;
 };
 
-export const fetchMarketing = async (): Promise<MarketingResponse> => {
-  const res = await api.get<MarketingResponse>('/marketing');
+export const fetchMarketing = async (companyId: string = 'company-1'): Promise<MarketingResponse> => {
+  const res = await api.get<MarketingResponse>(`/companies/${companyId}/marketing`);
   return res.data;
 };
 
-export const fetchInsights = async (filters?: FilterState): Promise<BusinessInsight[]> => {
-  const res = await api.get<BusinessInsight[]>('/insights', { params: buildParams(filters) });
+export const fetchInsights = async (
+  companyId: string = 'company-1',
+  filters?: FilterState
+): Promise<BusinessInsight[]> => {
+  const res = await api.get<BusinessInsight[]>(`/companies/${companyId}/insights`, {
+    params: buildParams(filters),
+  });
   return res.data;
 };
 

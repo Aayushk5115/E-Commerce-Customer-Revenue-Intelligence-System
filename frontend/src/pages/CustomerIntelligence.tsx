@@ -51,9 +51,13 @@ import type {
 
 interface CustomerIntelligenceProps {
   filters: FilterState;
+  companyId?: string;
 }
 
-export const CustomerIntelligence: React.FC<CustomerIntelligenceProps> = ({ filters }) => {
+export const CustomerIntelligence: React.FC<CustomerIntelligenceProps> = ({ filters, companyId: propCompanyId }) => {
+  const params = useParams<{ companyId?: string }>();
+  const activeCompanyId = propCompanyId || params.companyId || 'company-1';
+
   const [kpis, setKpis] = useState<CustomerKpis | null>(null);
   const [segments, setSegments] = useState<CustomerSegmentItem[]>([]);
   const [churn, setChurn] = useState<ChurnAnalytics | null>(null);
@@ -79,12 +83,12 @@ export const CustomerIntelligence: React.FC<CustomerIntelligenceProps> = ({ filt
     const loadOverview = async () => {
       try {
         const [kpiRes, segRes, churnRes, clvRes, retRes, cohortRes] = await Promise.all([
-          fetchCustomerKpis(filters),
-          fetchCustomerSegments(),
-          fetchChurnAnalytics(),
-          fetchClvDistribution(),
-          fetchCustomerRetentionTrend(),
-          fetchCohorts(),
+          fetchCustomerKpis(activeCompanyId, filters),
+          fetchCustomerSegments(activeCompanyId),
+          fetchChurnAnalytics(activeCompanyId),
+          fetchClvDistribution(activeCompanyId),
+          fetchCustomerRetentionTrend(activeCompanyId),
+          fetchCohorts(activeCompanyId),
         ]);
         setKpis(kpiRes);
         setSegments(segRes);
@@ -97,7 +101,7 @@ export const CustomerIntelligence: React.FC<CustomerIntelligenceProps> = ({ filt
       }
     };
     loadOverview();
-  }, [filters]);
+  }, [activeCompanyId, filters]);
 
   // Load Paginated Customer Table Data
   useEffect(() => {
@@ -106,6 +110,7 @@ export const CustomerIntelligence: React.FC<CustomerIntelligenceProps> = ({ filt
       setIsTableLoading(true);
       try {
         const res = await fetchCustomersTable(
+          activeCompanyId,
           currentPage,
           pageSize,
           searchValue,
@@ -130,7 +135,7 @@ export const CustomerIntelligence: React.FC<CustomerIntelligenceProps> = ({ filt
     return () => {
       isMounted = false;
     };
-  }, [currentPage, pageSize, searchValue, selectedSegmentFilter, selectedRiskFilter, sortBy, sortOrder]);
+  }, [activeCompanyId, currentPage, pageSize, searchValue, selectedSegmentFilter, selectedRiskFilter, sortBy, sortOrder]);
 
   const handleSort = (columnKey: string) => {
     if (sortBy === columnKey) {

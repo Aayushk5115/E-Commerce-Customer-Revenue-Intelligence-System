@@ -17,11 +17,19 @@ import {
   CartesianGrid,
   Tooltip,
 } from 'recharts';
+import { useParams } from 'react-router-dom';
 import { KpiCard } from '../components/common/KpiCard';
 import { fetchForecast } from '../services/api';
 import type { ForecastResponse } from '../types';
 
-export const Forecasting: React.FC = () => {
+interface ForecastingProps {
+  companyId?: string;
+}
+
+export const Forecasting: React.FC<ForecastingProps> = ({ companyId: propCompanyId }) => {
+  const params = useParams<{ companyId?: string }>();
+  const activeCompanyId = propCompanyId || params.companyId || 'company-1';
+
   const [horizon, setHorizon] = useState<number>(6);
   const [forecastData, setForecastData] = useState<ForecastResponse | null>(null);
 
@@ -29,7 +37,7 @@ export const Forecasting: React.FC = () => {
     let isMounted = true;
     const loadData = async () => {
       try {
-        const res = await fetchForecast(horizon);
+        const res = await fetchForecast(activeCompanyId, horizon);
         if (isMounted) {
           setForecastData(res);
         }
@@ -42,7 +50,7 @@ export const Forecasting: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [horizon]);
+  }, [activeCompanyId, horizon]);
 
   return (
     <div className="space-y-6">

@@ -1,3 +1,28 @@
+export interface CompanyMetadata {
+  company_id: string;
+  company_name: string;
+  company_slug: string;
+  logo_badge: string;
+  brand_color?: string;
+  industry: string;
+  description: string;
+  dataset_source: string;
+  dataset_status: string;
+  is_synthetic: boolean;
+  total_revenue?: number;
+  total_orders?: number;
+  total_customers?: number;
+  supported_modules?: string[];
+  created_at?: string;
+  live_kpis?: {
+    total_revenue: number;
+    total_orders: number;
+    total_customers: number;
+    profit_margin: number;
+    revenue_growth: number;
+  };
+}
+
 export interface FilterOptions {
   min_date: string;
   max_date: string;

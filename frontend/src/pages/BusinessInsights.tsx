@@ -8,14 +8,22 @@ import {
   Zap,
   Target,
 } from 'lucide-react';
+import { useParams } from 'react-router-dom';
 import { fetchInsights } from '../services/api';
 import type { BusinessInsight, FilterState } from '../types';
 
 interface BusinessInsightsProps {
   filters: FilterState;
+  companyId?: string;
 }
 
-export const BusinessInsights: React.FC<BusinessInsightsProps> = ({ filters }) => {
+export const BusinessInsights: React.FC<BusinessInsightsProps> = ({
+  filters,
+  companyId: propCompanyId,
+}) => {
+  const params = useParams<{ companyId?: string }>();
+  const activeCompanyId = propCompanyId || params.companyId || 'company-1';
+
   const [insights, setInsights] = useState<BusinessInsight[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
 
@@ -23,7 +31,7 @@ export const BusinessInsights: React.FC<BusinessInsightsProps> = ({ filters }) =
     let isMounted = true;
     const loadInsights = async () => {
       try {
-        const res = await fetchInsights(filters);
+        const res = await fetchInsights(activeCompanyId, filters);
         if (isMounted) {
           setInsights(res);
         }
@@ -36,7 +44,7 @@ export const BusinessInsights: React.FC<BusinessInsightsProps> = ({ filters }) =
     return () => {
       isMounted = false;
     };
-  }, [filters]);
+  }, [activeCompanyId, filters]);
 
   const categories = ['All', 'Revenue & Growth', 'Customer Retention', 'Product & Margins', 'Marketing Efficiency', 'Operational Efficiency'];
 

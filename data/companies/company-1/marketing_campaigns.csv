@@ -1,0 +1,51 @@
+campaign_id,campaign_name,channel,campaign_type,start_date,end_date,budget
+1,Campaign 1,Affiliate,Conversion,2022-06-18,2022-06-29,44851
+2,Campaign 2,Affiliate,Retargeting,2021-08-16,2021-09-08,21276
+3,Campaign 3,Affiliate,Awareness,2021-01-13,2021-02-07,44653
+4,Campaign 4,Facebook Ads,Awareness,2022-03-09,2022-04-10,4864
+5,Campaign 5,Google Ads,Conversion,2021-10-08,2021-11-28,46193
+6,Campaign 6,Email,Awareness,2021-12-09,2021-12-21,39171
+7,Campaign 7,Affiliate,Awareness,2021-05-01,2021-06-06,21439
+8,Campaign 8,Email,Conversion,2022-07-22,2022-09-05,42943
+9,Campaign 9,Facebook Ads,Conversion,2021-07-26,2021-08-18,14014
+10,Campaign 10,Instagram,Retargeting,2022-04-23,2022-05-17,28889
+11,Campaign 11,Email,Conversion,2022-02-02,2022-02-15,32031
+12,Campaign 12,Email,Retargeting,2021-06-14,2021-07-15,24658
+13,Campaign 13,Google Ads,Conversion,2021-12-20,2022-01-12,17048
+14,Campaign 14,Affiliate,Conversion,2021-10-26,2021-11-19,7370
+15,Campaign 15,Email,Conversion,2022-05-11,2022-07-03,38458
+16,Campaign 16,Google Ads,Awareness,2021-11-14,2021-12-10,43713
+17,Campaign 17,Instagram,Conversion,2022-05-20,2022-06-09,39213
+18,Campaign 18,Affiliate,Conversion,2021-11-14,2021-12-24,42542
+19,Campaign 19,Affiliate,Retargeting,2022-03-25,2022-05-24,10954
+20,Campaign 20,Instagram,Awareness,2022-07-03,2022-08-30,15127
+21,Campaign 21,Google Ads,Awareness,2022-06-26,2022-08-04,33950
+22,Campaign 22,Instagram,Awareness,2021-12-04,2022-01-17,28472
+23,Campaign 23,Affiliate,Awareness,2022-06-05,2022-06-24,12932
+24,Campaign 24,Email,Awareness,2022-10-29,2022-12-25,49687
+25,Campaign 25,Instagram,Awareness,2021-06-12,2021-07-17,42116
+26,Campaign 26,Instagram,Awareness,2021-09-19,2021-10-03,12316
+27,Campaign 27,Affiliate,Conversion,2021-09-11,2021-09-26,37297
+28,Campaign 28,Facebook Ads,Retargeting,2022-01-02,2022-02-03,26866
+29,Campaign 29,Email,Conversion,2022-09-09,2022-10-26,35177
+30,Campaign 30,Email,Retargeting,2021-07-02,2021-07-23,12570
+31,Campaign 31,Affiliate,Conversion,2021-03-11,2021-04-11,23969
+32,Campaign 32,Email,Awareness,2021-06-03,2021-06-28,33349
+33,Campaign 33,Facebook Ads,Retargeting,2022-03-21,2022-04-18,36664
+34,Campaign 34,Email,Conversion,2022-02-14,2022-04-04,39738
+35,Campaign 35,Instagram,Awareness,2021-05-30,2021-07-10,22551
+36,Campaign 36,Email,Conversion,2022-08-10,2022-08-31,43168
+37,Campaign 37,Instagram,Conversion,2021-05-09,2021-07-04,42932
+38,Campaign 38,Google Ads,Conversion,2021-07-03,2021-07-27,11771
+39,Campaign 39,Facebook Ads,Retargeting,2021-05-13,2021-06-12,45750
+40,Campaign 40,Affiliate,Retargeting,2022-10-24,2022-11-04,24593
+41,Campaign 41,Instagram,Retargeting,2021-07-14,2021-08-10,41162
+42,Campaign 42,Email,Conversion,2021-04-12,2021-05-08,28226
+43,Campaign 43,Email,Conversion,2021-04-19,2021-06-07,30169
+44,Campaign 44,Facebook Ads,Conversion,2022-11-16,2023-01-07,27017
+45,Campaign 45,Email,Awareness,2022-12-01,2022-12-24,45195
+46,Campaign 46,Google Ads,Conversion,2021-06-26,2021-08-19,35754
+47,Campaign 47,Email,Retargeting,2021-04-22,2021-05-07,11460
+48,Campaign 48,Affiliate,Awareness,2022-07-08,2022-09-02,6989
+49,Campaign 49,Google Ads,Conversion,2021-05-30,2021-06-17,33739
+50,Campaign 50,Facebook Ads,Conversion,2021-10-19,2021-11-17,23319
