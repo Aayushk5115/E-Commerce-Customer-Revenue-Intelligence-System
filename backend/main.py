@@ -78,9 +78,9 @@ async def preview_uploaded_dataset(
         if len(contents) == 0:
             raise HTTPException(status_code=400, detail="Uploaded file is empty.")
 
-        # Limit to 50MB
-        if len(contents) > 50 * 1024 * 1024:
-            raise HTTPException(status_code=400, detail="File size exceeds the 50MB limit.")
+        # Limit to 100MB
+        if len(contents) > 100 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="File size exceeds the 100MB limit.")
 
         df = read_dataset_file(contents, file.filename)
         

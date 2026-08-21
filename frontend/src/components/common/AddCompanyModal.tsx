@@ -89,7 +89,8 @@ export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({
       setColumnMapping(preview.validation.suggested_mapping || {});
     } catch (err: any) {
       console.error('File preview error:', err);
-      setUploadError(err.response?.data?.detail || 'Failed to read dataset. Ensure valid CSV or Excel format.');
+      const detail = err.response?.data?.detail || err.message || 'Failed to read dataset. Ensure valid CSV or Excel format.';
+      setUploadError(detail);
     } finally {
       setIsPreviewLoading(false);
     }

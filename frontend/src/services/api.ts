@@ -38,7 +38,7 @@ const API_BASE_URL = getBaseUrl();
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 60000,
+  timeout: 180000,
 });
 
 const buildParams = (filters?: FilterState) => {
@@ -71,6 +71,7 @@ export const previewDatasetFile = async (file: File): Promise<DatasetPreviewResp
   formData.append('file', file);
   const res = await api.post<DatasetPreviewResponse>('/upload/preview', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 300000,
   });
   return res.data;
 };
@@ -83,6 +84,7 @@ export const createCompanyWithDataset = async (
     formData,
     {
       headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 300000,
     }
   );
   return res.data;
@@ -113,6 +115,7 @@ export const uploadCompanyDataset = async (
     formData,
     {
       headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 300000,
     }
   );
   return res.data;

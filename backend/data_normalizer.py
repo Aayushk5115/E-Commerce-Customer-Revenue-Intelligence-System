@@ -108,10 +108,46 @@ def read_dataset_file(file_bytes: bytes, filename: str) -> pd.DataFrame:
     ext = os.path.splitext(filename)[1].lower()
 
     if ext in ['.xlsx', '.xls']:
+        # Attempt 1: Fast openpyxl read_only streaming parser with multi-sheet support
+        try:
+            import openpyxl
+            wb = openpyxl.load_workbook(io.BytesIO(file_bytes), read_only=True, data_only=True)
+            dfs = []
+            for sheet_name in wb.sheetnames:
+                sheet = wb[sheet_name]
+                rows_iter = sheet.iter_rows(values_only=True)
+                try:
+                    headers = next(rows_iter)
+                except StopIteration:
+                    continue
+                if not headers:
+                    continue
+                clean_headers = [str(h).strip() if h is not None else f'col_{i}' for i, h in enumerate(headers)]
+                data = [r for r in rows_iter if any(v is not None for v in r)]
+                if data:
+                    dfs.append(pd.DataFrame(data, columns=clean_headers))
+            wb.close()
+            if dfs:
+                combined_df = pd.concat(dfs, ignore_index=True)
+                if combined_df.shape[0] > 0 and combined_df.shape[1] > 0:
+                    return combined_df
+        except Exception:
+            pass
+
+        # Attempt 2: Standard pandas ExcelFile parsing across all sheets
+        try:
+            excel_file = pd.ExcelFile(io.BytesIO(file_bytes))
+            sheet_dfs = [excel_file.parse(sheet) for sheet in excel_file.sheet_names]
+            if sheet_dfs:
+                return pd.concat(sheet_dfs, ignore_index=True)
+        except Exception:
+            pass
+
+        # Attempt 3: Single sheet pd.read_excel
         try:
             return pd.read_excel(io.BytesIO(file_bytes))
         except Exception as e:
-            raise ValueError(f"Failed to parse Excel file: {str(e)}")
+            raise ValueError(f"Failed to parse Excel (.xlsx/.xls) file: {str(e)}. Please check file integrity.")
 
     elif ext == '.json':
         try:

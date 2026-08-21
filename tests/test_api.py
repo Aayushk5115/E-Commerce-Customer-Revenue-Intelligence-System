@@ -68,6 +68,44 @@ def test_upload_preview_ragged_and_semicolon_csv():
     assert res_ragged.status_code == 200
     assert res_ragged.json()["total_rows"] >= 1
 
+def test_upload_preview_excel_xlsx():
+    # Generate in-memory Excel file with 2 sheets (like Online Retail II)
+    excel_buf = io.BytesIO()
+    with pd.ExcelWriter(excel_buf, engine='openpyxl') as writer:
+        df_sheet1 = pd.DataFrame({
+            "Invoice": ["536365", "536366"],
+            "StockCode": ["85123A", "71053"],
+            "Description": ["WHITE HANGING HEART T-LIGHT HOLDER", "WHITE METAL LANTERN"],
+            "Quantity": [6, 6],
+            "InvoiceDate": ["2010-12-01 08:26:00", "2010-12-01 08:28:00"],
+            "Price": [2.55, 3.39],
+            "Customer ID": [17850, 17850],
+            "Country": ["United Kingdom", "United Kingdom"]
+        })
+        df_sheet2 = pd.DataFrame({
+            "Invoice": ["536367"],
+            "StockCode": ["84879"],
+            "Description": ["ASSORTED COLOUR BIRD ORNAMENT"],
+            "Quantity": [32],
+            "InvoiceDate": ["2010-12-01 08:34:00"],
+            "Price": [1.69],
+            "Customer ID": [13047],
+            "Country": ["United Kingdom"]
+        })
+        df_sheet1.to_excel(writer, sheet_name="Year 2009-2010", index=False)
+        df_sheet2.to_excel(writer, sheet_name="Year 2010-2011", index=False)
+
+    excel_bytes = excel_buf.getvalue()
+
+    res = client.post(
+        "/api/upload/preview",
+        files={"file": ("online_retail_II.xlsx", excel_bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")}
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["total_rows"] == 3  # Both sheets combined (2 + 1)
+    assert data["validation"]["is_valid"] is True
+
 def test_create_company_with_dataset():
     csv_content = b"order_id,customer_id,order_date,product_name,category,quantity,total_amount,shipping_state\n1001,501,2026-02-01,Running Shoes,Footwear,1,120.00,TX\n1002,502,2026-02-02,Yoga Mat,Fitness,2,45.00,CA\n"
     form_data = {

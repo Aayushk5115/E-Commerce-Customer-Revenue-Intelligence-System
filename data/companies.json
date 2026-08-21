@@ -123,5 +123,58 @@
       "insights"
     ],
     "created_at": "2026-08-15T00:00:00Z"
+  },
+  {
+    "company_id": "test-activewear",
+    "company_name": "Test Activewear Co",
+    "company_slug": "test-activewear",
+    "logo_badge": "\ud83c\udfc3",
+    "brand_color": "#10b981",
+    "industry": "Sports & Fitness",
+    "description": "Test dataset company for activewear merchandise.",
+    "dataset_source": "User Uploaded Dataset",
+    "dataset_status": "READY",
+    "dataset_file": "test_sales.csv",
+    "is_synthetic": false,
+    "base_currency": "INR",
+    "total_revenue": 165.0,
+    "total_orders": 2,
+    "total_customers": 2,
+    "data_quality_score": 100,
+    "has_profit_data": false,
+    "has_forecast_data": false,
+    "uploaded_at": "2026-08-21T22:41:07.182057",
+    "supported_modules": [
+      "executive",
+      "customers",
+      "products",
+      "marketing",
+      "forecast",
+      "insights"
+    ],
+    "created_at": "2026-08-21T22:41:07.183661"
+  },
+  {
+    "company_id": "lifecycle-demo",
+    "company_name": "Lifecycle Demo Corp",
+    "company_slug": "lifecycle-demo",
+    "logo_badge": "\ud83c\udfe2",
+    "brand_color": "#3b82f6",
+    "industry": "Consumer Retail",
+    "description": "Enterprise analytics for Lifecycle Demo Corp.",
+    "dataset_source": "No Dataset",
+    "dataset_status": "NO_DATASET",
+    "dataset_file": null,
+    "is_synthetic": false,
+    "base_currency": "INR",
+    "total_revenue": 0.0,
+    "total_orders": 0,
+    "total_customers": 0,
+    "data_quality_score": 0,
+    "has_profit_data": false,
+    "has_forecast_data": false,
+    "uploaded_at": "2026-08-21T22:41:10.304092",
+    "supported_modules": [],
+    "created_at": "2026-08-21T22:41:10.196297"
   }
 ]
