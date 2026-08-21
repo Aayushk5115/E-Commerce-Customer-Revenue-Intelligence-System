@@ -8,11 +8,22 @@ export interface CompanyMetadata {
   description: string;
   dataset_source: string;
   dataset_status: string;
+  dataset_file?: string | null;
   is_synthetic: boolean;
-  base_currency?: 'INR' | 'USD';
+  base_currency?: 'INR' | 'USD' | 'GBP' | 'BRL';
   total_revenue?: number;
   total_orders?: number;
   total_customers?: number;
+  data_quality_score?: number;
+  has_profit_data?: boolean;
+  has_forecast_data?: boolean;
+  data_source_details?: {
+    provenance: string;
+    citation: string;
+    limitations: string;
+    supported_analytics: string[];
+    unsupported_analytics: string[];
+  };
   supported_modules?: string[];
   created_at?: string;
   live_kpis?: {
@@ -29,6 +40,8 @@ export interface CurrencyRateResponse {
   rates: {
     USD: number;
     INR: number;
+    GBP?: number;
+    BRL?: number;
   };
   last_updated: string;
   source: string;

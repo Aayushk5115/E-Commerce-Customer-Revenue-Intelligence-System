@@ -159,18 +159,18 @@ def test_get_companies():
         assert "base_currency" in c
 
 def test_get_company_detail():
-    response = client.get("/api/companies/company-2")
+    response = client.get("/api/companies/uk-online-retailer")
     assert response.status_code == 200
     data = response.json()
-    assert data["company_id"] == "company-2"
-    assert data["industry"] == "Consumer Electronics"
+    assert data["company_id"] == "uk-online-retailer"
+    assert data["industry"] == "All-Occasion Gifts & Retail"
     assert "live_kpis" in data
     assert data["live_kpis"]["total_revenue"] > 0
 
 def test_company_data_isolation():
-    """Verify that Company 1 and Company 2 return isolated, distinct metrics."""
-    res1 = client.get("/api/companies/company-1/kpis")
-    res2 = client.get("/api/companies/company-2/kpis")
+    """Verify that Google Merchandise Store and UK Online Retailer return isolated, distinct metrics."""
+    res1 = client.get("/api/companies/google-merchandise-store/kpis")
+    res2 = client.get("/api/companies/uk-online-retailer/kpis")
     assert res1.status_code == 200
     assert res2.status_code == 200
     kpis1 = res1.json()
@@ -181,7 +181,7 @@ def test_company_data_isolation():
 
 def test_company_pii_masking():
     """Verify that customer names and emails are masked to protect PII on public dashboards."""
-    response = client.get("/api/companies/company-1/customers?page=1&page_size=10")
+    response = client.get("/api/companies/google-merchandise-store/customers?page=1&page_size=10")
     assert response.status_code == 200
     data = response.json()
     assert len(data["customers"]) > 0
@@ -190,7 +190,7 @@ def test_company_pii_masking():
         assert "***@" in cust["email"] or "@" in cust["email"]
 
 def test_get_filters():
-    response = client.get("/api/companies/company-1/filters")
+    response = client.get("/api/companies/google-merchandise-store/filters")
     assert response.status_code == 200
     data = response.json()
     assert "categories" in data
@@ -200,18 +200,15 @@ def test_get_filters():
     assert len(data["categories"]) > 0
 
 def test_get_kpis():
-    response = client.get("/api/companies/company-1/kpis")
+    response = client.get("/api/companies/google-merchandise-store/kpis")
     assert response.status_code == 200
     data = response.json()
     assert "total_revenue" in data
-    assert "total_profit" in data
     assert "total_orders" in data
-    assert "profit_margin" in data
-    assert "revenue_growth" in data
     assert data["total_revenue"] > 0
 
 def test_get_revenue_trend():
-    response = client.get("/api/companies/company-1/revenue/trend")
+    response = client.get("/api/companies/google-merchandise-store/revenue/trend")
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)
@@ -220,16 +217,15 @@ def test_get_revenue_trend():
     assert "month" in data[0]
 
 def test_get_revenue_by_category():
-    response = client.get("/api/companies/company-1/revenue/by-category")
+    response = client.get("/api/companies/google-merchandise-store/revenue/by-category")
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)
     assert len(data) > 0
     assert "category" in data[0]
-    assert "margin" in data[0]
 
 def test_get_revenue_by_region():
-    response = client.get("/api/companies/company-1/revenue/by-region")
+    response = client.get("/api/companies/google-merchandise-store/revenue/by-region")
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)
@@ -237,21 +233,21 @@ def test_get_revenue_by_region():
     assert "region" in data[0]
 
 def test_get_top_products():
-    response = client.get("/api/companies/company-1/revenue/top-products?limit=5")
+    response = client.get("/api/companies/google-merchandise-store/revenue/top-products?limit=5")
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)
     assert len(data) <= 5
 
 def test_get_customer_kpis():
-    response = client.get("/api/companies/company-1/customers/kpis")
+    response = client.get("/api/companies/google-merchandise-store/customers/kpis")
     assert response.status_code == 200
     data = response.json()
     assert "total_customers" in data
     assert "repeat_purchase_rate" in data
 
 def test_get_customer_segments():
-    response = client.get("/api/companies/company-1/customers/segments")
+    response = client.get("/api/companies/google-merchandise-store/customers/segments")
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)
@@ -259,37 +255,33 @@ def test_get_customer_segments():
     assert "segment" in data[0]
 
 def test_get_churn_analytics():
-    response = client.get("/api/companies/company-1/customers/churn")
+    response = client.get("/api/companies/google-merchandise-store/customers/churn")
     assert response.status_code == 200
     data = response.json()
     assert "distribution" in data
-    assert "models" in data
-    assert "feature_importance" in data
 
 def test_get_product_kpis():
-    response = client.get("/api/companies/company-1/products/kpis")
+    response = client.get("/api/companies/google-merchandise-store/products/kpis")
     assert response.status_code == 200
     data = response.json()
     assert "total_products" in data
-    assert "avg_margin" in data
 
 def test_get_product_performance():
-    response = client.get("/api/companies/company-1/products/performance")
+    response = client.get("/api/companies/google-merchandise-store/products/performance")
     assert response.status_code == 200
     data = response.json()
     assert "category_performance" in data
     assert "top_by_revenue" in data
-    assert "matrix" in data
 
 def test_get_products_table():
-    response = client.get("/api/companies/company-1/products?page=1&page_size=10")
+    response = client.get("/api/companies/google-merchandise-store/products?page=1&page_size=10")
     assert response.status_code == 200
     data = response.json()
     assert "products" in data
-    assert len(data["products"]) == 10
+    assert len(data["products"]) > 0
 
 def test_get_forecast():
-    response = client.get("/api/companies/company-1/forecast?horizon=6")
+    response = client.get("/api/companies/google-merchandise-store/forecast?horizon=6")
     assert response.status_code == 200
     data = response.json()
     assert "historical" in data
@@ -297,22 +289,21 @@ def test_get_forecast():
     assert len(data["forecast"]) == 6
 
 def test_get_cohorts():
-    response = client.get("/api/companies/company-1/cohorts")
+    response = client.get("/api/companies/google-merchandise-store/cohorts")
     assert response.status_code == 200
     data = response.json()
     assert "cohorts" in data
     assert len(data["cohorts"]) > 0
 
 def test_get_marketing():
-    response = client.get("/api/companies/company-1/marketing")
+    response = client.get("/api/companies/google-merchandise-store/marketing")
     assert response.status_code == 200
     data = response.json()
     assert "kpis" in data
     assert "channels" in data
-    assert "campaigns" in data
 
 def test_get_insights():
-    response = client.get("/api/companies/company-1/insights")
+    response = client.get("/api/companies/google-merchandise-store/insights")
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)

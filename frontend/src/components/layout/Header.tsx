@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Menu, RefreshCw, Filter, Clock, ArrowLeft, Table, Trash2, UploadCloud, Database } from 'lucide-react';
+import { Menu, RefreshCw, Filter, Clock, ArrowLeft, Table, Trash2, UploadCloud, Database, Info } from 'lucide-react';
 import { CompanySwitcher } from '../common/CompanySwitcher';
 import { CurrencySelector } from '../common/CurrencySelector';
 import { ViewDatasetModal } from '../common/ViewDatasetModal';
 import { RemoveDatasetDialog } from '../common/RemoveDatasetDialog';
 import { AddCompanyModal } from '../common/AddCompanyModal';
+import { DataSourceModal } from '../common/DataSourceModal';
 import { fetchCompanyDetail } from '../../services/api';
 import type { FilterState, CompanyMetadata } from '../../types';
 
@@ -37,6 +38,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [isViewDatasetOpen, setIsViewDatasetOpen] = useState<boolean>(false);
   const [isRemoveDatasetOpen, setIsRemoveDatasetOpen] = useState<boolean>(false);
   const [isUploadDatasetOpen, setIsUploadDatasetOpen] = useState<boolean>(false);
+  const [isDataSourceOpen, setIsDataSourceOpen] = useState<boolean>(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -107,7 +109,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Right Side: Active Filter Pills & Refresh Action */}
+        {/* Right Side: Active Filter Pills & Action Buttons */}
         <div className="flex items-center flex-wrap gap-2.5 justify-between md:justify-end">
           {/* Active Filter Pills */}
           {activeFilterCount.length > 0 && (
@@ -130,6 +132,18 @@ export const Header: React.FC<HeaderProps> = ({
                 </span>
               )}
             </div>
+          )}
+
+          {/* Data Source & Provenance Button */}
+          {currentCompany && (
+            <button
+              onClick={() => setIsDataSourceOpen(true)}
+              className="flex items-center space-x-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60 transition-colors cursor-pointer"
+              title="View dataset origin, limitations & methodology"
+            >
+              <Info size={13} className="text-blue-500" />
+              <span className="hidden sm:inline">Data Source & Methodology</span>
+            </button>
           )}
 
           {/* Dataset Action Buttons */}
@@ -162,7 +176,7 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
-          {/* Currency Selector (₹ INR / $ USD) */}
+          {/* Currency Selector (₹ INR / $ USD / £ GBP / R$ BRL) */}
           <CurrencySelector />
 
           {/* Last Updated Timestamp */}
@@ -178,10 +192,10 @@ export const Header: React.FC<HeaderProps> = ({
             className="flex items-center space-x-2 text-xs font-semibold px-3.5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-all duration-150 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
           >
             <RefreshCw
-              size={14}
-              className={`${isRefreshing ? 'animate-spin' : 'hover:rotate-180 transition-transform duration-500'}`}
+              size={13}
+              className={`${isRefreshing ? 'animate-spin' : ''}`}
             />
-            <span>{isRefreshing ? 'Syncing...' : 'Refresh Data'}</span>
+            <span className="hidden sm:inline">Refresh</span>
           </button>
         </div>
       </div>
@@ -191,7 +205,8 @@ export const Header: React.FC<HeaderProps> = ({
         <ViewDatasetModal
           isOpen={isViewDatasetOpen}
           onClose={() => setIsViewDatasetOpen(false)}
-          company={currentCompany}
+          companyId={currentCompany.company_id}
+          companyName={currentCompany.company_name}
         />
       )}
 
@@ -200,30 +215,36 @@ export const Header: React.FC<HeaderProps> = ({
         <RemoveDatasetDialog
           isOpen={isRemoveDatasetOpen}
           onClose={() => setIsRemoveDatasetOpen(false)}
-          company={currentCompany}
-          onDatasetRemoved={(updated) => {
-            setCurrentCompany(updated);
-            if (onCompanyChange) onCompanyChange(updated);
+          companyId={currentCompany.company_id}
+          companyName={currentCompany.company_name}
+          onDatasetRemoved={() => {
+            setIsRemoveDatasetOpen(false);
             onRefresh();
           }}
         />
       )}
 
-      {/* Upload Dataset Modal */}
+      {/* Upload Dataset for Empty Company Modal */}
       {currentCompany && (
         <AddCompanyModal
           isOpen={isUploadDatasetOpen}
           onClose={() => setIsUploadDatasetOpen(false)}
           targetCompany={currentCompany}
-          onCompanyCreated={(updated) => {
-            setCurrentCompany(updated);
-            if (onCompanyChange) onCompanyChange(updated);
+          onCompanyCreated={() => {
+            setIsUploadDatasetOpen(false);
             onRefresh();
           }}
+        />
+      )}
+
+      {/* Data Source & Methodology Modal */}
+      {currentCompany && (
+        <DataSourceModal
+          isOpen={isDataSourceOpen}
+          onClose={() => setIsDataSourceOpen(false)}
+          company={currentCompany}
         />
       )}
     </header>
   );
 };
-
-export default Header;

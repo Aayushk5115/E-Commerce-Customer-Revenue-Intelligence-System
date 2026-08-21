@@ -26,6 +26,7 @@ import {
 import { KpiCard } from '../components/common/KpiCard';
 import { GlobalFilterBar } from '../components/common/GlobalFilterBar';
 import { EmptyDatasetState } from '../components/common/EmptyDatasetState';
+import { DataSourceModal } from '../components/common/DataSourceModal';
 import { useParams } from 'react-router-dom';
 import { useCurrency } from '../context/CurrencyContext';
 import {
@@ -35,6 +36,7 @@ import {
   fetchRevenueByRegion,
   fetchTopProducts,
   fetchCustomerSegments,
+  fetchCompanyDetail,
 } from '../services/api';
 import type {
   ExecutiveKpis,
@@ -45,6 +47,7 @@ import type {
   CustomerSegmentItem,
   FilterState,
   FilterOptions,
+  CompanyMetadata,
 } from '../types';
 
 interface ExecutiveOverviewProps {
@@ -66,6 +69,8 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
   const activeCompanyId = propCompanyId || params.companyId || 'company-1';
   const { formatCurrency, getCurrencySymbol } = useCurrency();
 
+  const [companyMeta, setCompanyMeta] = useState<CompanyMetadata | null>(null);
+  const [isDataSourceOpen, setIsDataSourceOpen] = useState<boolean>(false);
   const [kpis, setKpis] = useState<ExecutiveKpis | null>(null);
   const [trend, setTrend] = useState<RevenueTrendItem[]>([]);
   const [categoryData, setCategoryData] = useState<CategoryRevenueItem[]>([]);
@@ -77,13 +82,14 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
     let isMounted = true;
     const loadAll = async () => {
       try {
-        const [kpiRes, trendRes, catRes, regRes, topProdRes, segRes] = await Promise.all([
+        const [kpiRes, trendRes, catRes, regRes, topProdRes, segRes, metaRes] = await Promise.all([
           fetchExecutiveKpis(activeCompanyId, filters),
           fetchRevenueTrend(activeCompanyId, filters),
           fetchRevenueByCategory(activeCompanyId, filters),
           fetchRevenueByRegion(activeCompanyId, filters, 8),
           fetchTopProducts(activeCompanyId, filters, 8),
           fetchCustomerSegments(activeCompanyId),
+          fetchCompanyDetail(activeCompanyId).catch(() => null),
         ]);
         if (isMounted) {
           setKpis(kpiRes);
@@ -92,6 +98,7 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
           setRegionData(regRes);
           setTopProducts(topProdRes);
           setSegments(segRes);
+          if (metaRes) setCompanyMeta(metaRes);
         }
       } catch (err) {
         console.error('Error fetching Executive Overview:', err);
@@ -113,6 +120,39 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Provenance & Transparency Banner */}
+      {companyMeta && (
+        <div className="rounded-2xl bg-gradient-to-r from-blue-950/40 via-slate-900 to-indigo-950/30 border border-blue-900/40 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md backdrop-blur-md">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-xl shrink-0">
+              <span>{companyMeta.logo_badge || '🌐'}</span>
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-white tracking-tight">{companyMeta.company_name}</span>
+                <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${
+                  companyMeta.is_synthetic
+                    ? 'bg-amber-950/60 text-amber-300 border-amber-800'
+                    : 'bg-emerald-950/60 text-emerald-300 border-emerald-800'
+                }`}>
+                  {companyMeta.dataset_source}
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5 line-clamp-1">
+                Base Currency: <strong className="text-amber-400 font-mono">{companyMeta.base_currency || 'USD'}</strong> • Provenance: {companyMeta.data_source_details?.provenance || companyMeta.dataset_source}
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setIsDataSourceOpen(true)}
+            className="self-start sm:self-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-blue-300 bg-blue-900/50 hover:bg-blue-800/60 border border-blue-700/60 transition-colors shrink-0 cursor-pointer shadow-sm"
+          >
+            <span>Data Source & Methodology</span>
+          </button>
+        </div>
+      )}
+
       {/* Global Dimension Filters */}
       <GlobalFilterBar
         options={filterOptions}
@@ -471,6 +511,15 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Data Source & Methodology Modal */}
+      {companyMeta && (
+        <DataSourceModal
+          isOpen={isDataSourceOpen}
+          onClose={() => setIsDataSourceOpen(false)}
+          company={companyMeta}
+        />
+      )}
     </div>
   );
 };

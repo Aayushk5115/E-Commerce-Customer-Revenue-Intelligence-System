@@ -1,0 +1,24 @@
+{
+  "original_filename": "ga4_obfuscated_sample_ecommerce.csv",
+  "rows_received": 14500,
+  "rows_cleaned": 14500,
+  "rows_rejected": 0,
+  "total_revenue": 761433.77,
+  "total_orders": 14500,
+  "total_customers": 14500,
+  "total_products": 10,
+  "has_cost_data": false,
+  "has_forecast_data": true,
+  "data_quality_score": 100,
+  "date_range": "Jan 2025 \u2013 Jan 2026",
+  "supported_analytics": [
+    "Revenue & Executive Overview",
+    "Customer Intelligence & RFM Segmentation",
+    "Product & Merchandise Intelligence",
+    "Predictive Revenue Forecasting (ARIMA)"
+  ],
+  "unsupported_analytics": [
+    "Profit & Margin Analytics (Cost data not provided)"
+  ],
+  "uploaded_at": "2026-08-21T22:49:14.980223"
+}

@@ -34,8 +34,8 @@ class CompanyAnalyticsEngine:
                 if req not in norm_orders.columns:
                     norm_orders[req] = np.nan
             
-            norm_orders['order_id'] = norm_orders['order_id'].fillna(0).astype('int32')
-            norm_orders['customer_id'] = norm_orders['customer_id'].fillna(0).astype('int32')
+            norm_orders['order_id'] = norm_orders['order_id'].fillna('0').astype(str)
+            norm_orders['customer_id'] = norm_orders['customer_id'].fillna('0').astype(str)
             norm_orders['order_status'] = norm_orders['order_status'].fillna('Completed').astype('category')
             norm_orders['shipping_state'] = norm_orders['shipping_state'].fillna('Other').astype('category')
             norm_orders['total_amount'] = norm_orders['total_amount'].fillna(0.0).astype('float32')
@@ -54,8 +54,8 @@ class CompanyAnalyticsEngine:
                 if req not in norm_items.columns:
                     norm_items[req] = 0
                     
-            norm_items['order_id'] = norm_items['order_id'].fillna(0).astype('int32')
-            norm_items['product_id'] = norm_items['product_id'].fillna(0).astype('int32')
+            norm_items['order_id'] = norm_items['order_id'].fillna('0').astype(str)
+            norm_items['product_id'] = norm_items['product_id'].fillna('0').astype(str)
             norm_items['quantity'] = norm_items['quantity'].fillna(1).astype('int16')
             norm_items['item_revenue'] = norm_items['item_revenue'].fillna(0.0).astype('float32')
             norm_items['item_cost'] = norm_items['item_cost'].fillna(0.0).astype('float32')
@@ -74,7 +74,7 @@ class CompanyAnalyticsEngine:
                 if req not in norm_cust.columns:
                     norm_cust[req] = 'Unknown' if req not in ['customer_id', 'signup_date'] else np.nan
 
-            norm_cust['customer_id'] = norm_cust['customer_id'].fillna(0).astype('int32')
+            norm_cust['customer_id'] = norm_cust['customer_id'].fillna('0').astype(str)
             norm_cust['acquisition_channel'] = norm_cust['acquisition_channel'].fillna('Direct').astype('category')
             norm_cust['state'] = norm_cust['state'].fillna('Other').astype('category')
             norm_cust['signup_date'] = pd.to_datetime(norm_cust['signup_date'], errors='coerce')
@@ -92,7 +92,7 @@ class CompanyAnalyticsEngine:
                 if req not in norm_prod.columns:
                     norm_prod[req] = 0 if 'price' in req or 'cost' in req or 'stock' in req else 'General'
 
-            norm_prod['product_id'] = norm_prod['product_id'].fillna(0).astype('int32')
+            norm_prod['product_id'] = norm_prod['product_id'].fillna('0').astype(str)
             norm_prod['category'] = norm_prod['category'].fillna('General').astype('category')
             norm_prod['subcategory'] = norm_prod['subcategory'].fillna('General').astype('category')
             norm_prod['brand'] = norm_prod['brand'].fillna('Brand').astype('category')
@@ -109,13 +109,13 @@ class CompanyAnalyticsEngine:
             raw_ret = pd.read_csv(ret_path)
             norm_ret = normalize_dataframe(raw_ret, "returns")
             if 'product_id' in norm_ret.columns:
-                norm_ret['product_id'] = norm_ret['product_id'].fillna(0).astype('int32')
+                norm_ret['product_id'] = norm_ret['product_id'].fillna('0').astype(str)
             else:
-                norm_ret['product_id'] = 0
+                norm_ret['product_id'] = '0'
             if 'return_id' in norm_ret.columns:
-                norm_ret['return_id'] = norm_ret['return_id'].fillna(0).astype('int32')
+                norm_ret['return_id'] = norm_ret['return_id'].fillna('0').astype(str)
             else:
-                norm_ret['return_id'] = 0
+                norm_ret['return_id'] = '0'
             self.returns_df = norm_ret
         else:
             self.returns_df = pd.DataFrame(columns=['return_id', 'product_id'])
@@ -134,11 +134,15 @@ class CompanyAnalyticsEngine:
         # 7. ML Outputs
         try:
             self.segments_df = pd.read_csv(os.path.join(self.ml_dir, "customer_segments.csv"))
+            if 'customer_id' in self.segments_df.columns:
+                self.segments_df['customer_id'] = self.segments_df['customer_id'].astype(str)
         except Exception:
             self.segments_df = pd.DataFrame()
             
         try:
             self.churn_df = pd.read_csv(os.path.join(self.ml_dir, "churn_predictions.csv"))
+            if 'customer_id' in self.churn_df.columns:
+                self.churn_df['customer_id'] = self.churn_df['customer_id'].astype(str)
         except Exception:
             self.churn_df = pd.DataFrame()
             
@@ -161,21 +165,39 @@ class CompanyAnalyticsEngine:
 
     def _precompute_views(self, order_items_df: pd.DataFrame):
         if not order_items_df.empty and not self.orders_df.empty:
+            order_items_df['order_id'] = order_items_df['order_id'].astype(str)
+            self.orders_df['order_id'] = self.orders_df['order_id'].astype(str)
+            self.orders_df['customer_id'] = self.orders_df['customer_id'].astype(str)
+
             items_merged = order_items_df.merge(
                 self.orders_df[['order_id', 'customer_id', 'order_date', 'order_status', 'shipping_state']],
                 on='order_id',
                 how='inner'
             )
-            items_merged = items_merged.merge(
-                self.products_df[['product_id', 'product_name', 'category', 'brand']],
-                on='product_id',
-                how='left'
-            )
-            items_merged = items_merged.merge(
-                self.customers_df[['customer_id', 'acquisition_channel']],
-                on='customer_id',
-                how='left'
-            )
+            if not self.products_df.empty:
+                items_merged['product_id'] = items_merged['product_id'].astype(str)
+                self.products_df['product_id'] = self.products_df['product_id'].astype(str)
+                items_merged = items_merged.merge(
+                    self.products_df[['product_id', 'product_name', 'category', 'brand']],
+                    on='product_id',
+                    how='left'
+                )
+            else:
+                items_merged['product_name'] = 'General Item'
+                items_merged['category'] = 'General'
+                items_merged['brand'] = 'Brand'
+
+            if not self.customers_df.empty:
+                items_merged['customer_id'] = items_merged['customer_id'].astype(str)
+                self.customers_df['customer_id'] = self.customers_df['customer_id'].astype(str)
+                items_merged = items_merged.merge(
+                    self.customers_df[['customer_id', 'acquisition_channel']],
+                    on='customer_id',
+                    how='left'
+                )
+            else:
+                items_merged['acquisition_channel'] = 'Direct'
+
             items_merged['month'] = items_merged['order_date'].dt.to_period('M').dt.to_timestamp()
             self.master_items_df = items_merged
         else:
@@ -188,6 +210,7 @@ class CompanyAnalyticsEngine:
         # Precompute customer aggregate stats
         valid_orders = self.orders_df[self.orders_df['order_status'] != 'Cancelled'] if not self.orders_df.empty else pd.DataFrame()
         if not valid_orders.empty:
+            valid_orders['customer_id'] = valid_orders['customer_id'].astype(str)
             cust_stats = valid_orders.groupby('customer_id').agg(
                 orders_count=('order_id', 'count'),
                 total_spent=('total_amount', 'sum'),
@@ -195,17 +218,25 @@ class CompanyAnalyticsEngine:
                 first_order_date=('order_date', 'min'),
                 last_order_date=('order_date', 'max')
             ).reset_index()
+            cust_stats['customer_id'] = cust_stats['customer_id'].astype(str)
         else:
             cust_stats = pd.DataFrame(columns=['customer_id', 'orders_count', 'total_spent', 'avg_order_value', 'first_order_date', 'last_order_date'])
 
         # Merge with customers, segments, and churn predictions
-        cust_full = self.customers_df.merge(cust_stats, on='customer_id', how='left') if not self.customers_df.empty else pd.DataFrame()
+        if not self.customers_df.empty:
+            self.customers_df['customer_id'] = self.customers_df['customer_id'].astype(str)
+            cust_full = self.customers_df.merge(cust_stats, on='customer_id', how='left')
+        else:
+            cust_full = pd.DataFrame()
+
         if not cust_full.empty:
             cust_full['orders_count'] = cust_full['orders_count'].fillna(0).astype('int16')
             cust_full['total_spent'] = cust_full['total_spent'].fillna(0.0).astype('float32')
             cust_full['avg_order_value'] = cust_full['avg_order_value'].fillna(0.0).astype('float32')
             
             if not self.segments_df.empty and 'customer_id' in self.segments_df.columns:
+                self.segments_df['customer_id'] = self.segments_df['customer_id'].astype(str)
+                cust_full['customer_id'] = cust_full['customer_id'].astype(str)
                 cust_full = cust_full.merge(
                     self.segments_df[['customer_id', 'Segment', 'Cluster', 'RFM_Score', 'recency', 'frequency', 'monetary']],
                     on='customer_id',
@@ -218,6 +249,8 @@ class CompanyAnalyticsEngine:
                 cust_full['RFM_Score'] = 3
                 
             if not self.churn_df.empty and 'customer_id' in self.churn_df.columns:
+                self.churn_df['customer_id'] = self.churn_df['customer_id'].astype(str)
+                cust_full['customer_id'] = cust_full['customer_id'].astype(str)
                 cust_full = cust_full.merge(
                     self.churn_df[['customer_id', 'churn_probability', 'risk_level']],
                     on='customer_id',
@@ -618,7 +651,7 @@ class CompanyAnalyticsEngine:
 
         return [
             {
-                "product_id": int(r['product_id']),
+                "product_id": str(r['product_id']),
                 "product_name": str(r['product_name']),
                 "category": str(r['category']),
                 "revenue": float(r['revenue']),
@@ -908,7 +941,7 @@ class CompanyAnalyticsEngine:
             masked_mail = mask_email(r.get('email', ''))
 
             records.append({
-                "customer_id": int(r['customer_id']),
+                "customer_id": str(r['customer_id']),
                 "name": masked_name,
                 "email": masked_mail,
                 "city": str(r.get('city', 'Unknown')),
@@ -1042,7 +1075,7 @@ class CompanyAnalyticsEngine:
         scatter_sample = prod_agg.sort_values(by='revenue', ascending=False).head(150)
         scatter_data = [
             {
-                "product_id": int(r['product_id']),
+                "product_id": str(r['product_id']),
                 "product_name": str(r['product_name']),
                 "category": str(r['category']),
                 "revenue": float(r['revenue']),
@@ -1162,7 +1195,7 @@ class CompanyAnalyticsEngine:
         records = []
         for _, r in page_df.iterrows():
             records.append({
-                "product_id": int(r['product_id']),
+                "product_id": str(r['product_id']),
                 "product_name": str(r['product_name']),
                 "category": str(r['category']),
                 "subcategory": str(r.get('subcategory', 'General')),
@@ -1615,27 +1648,39 @@ class MultiCompanyAnalyticsManager:
         return result
 
     def get_currency_rates(self) -> Dict[str, Any]:
-        """Returns central exchange rates with timestamp."""
+        """Returns central exchange rates with timestamp for USD, INR, GBP, BRL."""
         return {
             "base": "USD",
             "rates": {
                 "USD": 1.0,
-                "INR": 83.5
+                "INR": 83.5,
+                "GBP": 0.78,
+                "BRL": 5.50
             },
             "last_updated": datetime.now().strftime("%Y-%m-%d %H:%M:%S UTC"),
-            "source": "Centralized Configured Exchange Engine (1 USD = ₹83.50 INR)"
+            "source": "Global Multi-Currency Engine (USD, INR ₹83.50, GBP £0.78, BRL R$5.50)"
         }
 
     def convert_currency(self, amount: float, from_curr: str, to_curr: str) -> float:
-        """Converts monetary amount between INR and USD."""
+        """Converts monetary amount between USD, INR, GBP, and BRL."""
         if from_curr == to_curr or amount == 0:
             return float(amount)
-        rate = 83.5
-        if from_curr == "INR" and to_curr == "USD":
-            return float(amount / rate)
-        elif from_curr == "USD" and to_curr == "INR":
-            return float(amount * rate)
-        return float(amount)
+        
+        rates_to_usd = {
+            "USD": 1.0,
+            "INR": 83.5,
+            "GBP": 0.78,
+            "BRL": 5.50
+        }
+        
+        from_rate = rates_to_usd.get(from_curr.upper(), 1.0)
+        to_rate = rates_to_usd.get(to_curr.upper(), 1.0)
+
+        # Convert from_curr -> USD
+        amount_usd = amount if from_curr.upper() == "USD" else amount / from_rate
+        # Convert USD -> to_curr
+        result = amount_usd if to_curr.upper() == "USD" else amount_usd * to_rate
+        return float(result)
 
     def add_company(
         self,

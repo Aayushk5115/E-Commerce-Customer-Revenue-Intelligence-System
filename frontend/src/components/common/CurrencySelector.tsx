@@ -3,7 +3,7 @@ import { ChevronDown, Check, Coins, RefreshCw } from 'lucide-react';
 import { useCurrency, type CurrencyCode } from '../../context/CurrencyContext';
 
 export const CurrencySelector: React.FC = () => {
-  const { selectedCurrency, companyBaseCurrency, setCurrency, exchangeRate, lastUpdated } = useCurrency();
+  const { selectedCurrency, companyBaseCurrency, setCurrency, rates, lastUpdated } = useCurrency();
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -18,9 +18,13 @@ export const CurrencySelector: React.FC = () => {
   }, []);
 
   const options: { code: CurrencyCode; label: string; symbol: string; desc: string }[] = [
-    { code: 'INR', label: 'INR (₹)', symbol: '₹', desc: 'Indian Rupee (Lakhs / Crores)' },
-    { code: 'USD', label: 'USD ($)', symbol: '$', desc: 'US Dollar (Thousands / Millions)' },
+    { code: 'USD', label: 'USD ($)', symbol: '$', desc: 'US Dollar (Base rate 1.0)' },
+    { code: 'INR', label: 'INR (₹)', symbol: '₹', desc: 'Indian Rupee (₹83.50 / USD)' },
+    { code: 'GBP', label: 'GBP (£)', symbol: '£', desc: 'British Pound (£0.78 / USD)' },
+    { code: 'BRL', label: 'BRL (R$)', symbol: 'R$', desc: 'Brazilian Real (R$5.50 / USD)' },
   ];
+
+  const currentOpt = options.find((o) => o.code === selectedCurrency) || options[0];
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -30,11 +34,11 @@ export const CurrencySelector: React.FC = () => {
         aria-label="Select Currency"
       >
         <div className="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xs font-bold shadow-inner">
-          {selectedCurrency === 'INR' ? '₹' : '$'}
+          {currentOpt.symbol}
         </div>
         <div className="text-left">
           <span className="text-xs font-bold block leading-tight">
-            {selectedCurrency === 'INR' ? '₹ INR' : '$ USD'}
+            {currentOpt.label}
           </span>
         </div>
         <ChevronDown
@@ -45,11 +49,11 @@ export const CurrencySelector: React.FC = () => {
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl z-50 p-2 animate-in fade-in slide-in-from-top-2 duration-150">
+        <div className="absolute right-0 mt-2 w-72 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl z-50 p-2 animate-in fade-in slide-in-from-top-2 duration-150">
           <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800/80">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
               <Coins size={12} className="text-amber-500" />
-              Display Currency
+              Presentation Currency
             </span>
           </div>
 
@@ -81,7 +85,7 @@ export const CurrencySelector: React.FC = () => {
                         </span>
                         {isBase && (
                           <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 font-semibold">
-                            Base
+                            Dataset Base
                           </span>
                         )}
                       </div>
@@ -102,7 +106,7 @@ export const CurrencySelector: React.FC = () => {
             <RefreshCw size={11} className="text-slate-400 mt-0.5 shrink-0" />
             <div>
               <span className="font-semibold text-slate-600 dark:text-slate-300">
-                1 USD = ₹{exchangeRate.toFixed(2)} INR
+                1 USD = ₹{rates.INR} INR = £{rates.GBP} GBP = R${rates.BRL} BRL
               </span>
               <span className="block text-[9px] mt-0.5">{lastUpdated}</span>
             </div>

@@ -167,6 +167,8 @@ export const fetchCompanies = async (): Promise<CompanyMetadata[]> => {
   return res.data;
 };
 
+export const fetchCompaniesCatalog = fetchCompanies;
+
 export const fetchCompanyDetail = async (companyId: string = 'company-1'): Promise<CompanyMetadata> => {
   const res = await api.get<CompanyMetadata>(`/companies/${companyId}`);
   return res.data;
