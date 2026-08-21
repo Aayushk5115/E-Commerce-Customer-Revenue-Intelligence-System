@@ -49,6 +49,25 @@ def test_upload_preview_csv():
     assert suggested.get("OrderID") == "order_id"
     assert suggested.get("CustomerID") == "customer_id"
 
+def test_upload_preview_ragged_and_semicolon_csv():
+    # CSV with extra comment lines or semicolon delimiter
+    semi_csv = b"OrderID;CustomerID;OrderDate;ProductName;Category;Quantity;Price;State\n201;C10;2026-01-20;Smart Watch;Electronics;1;199.99;WA\n202;C11;2026-01-21;Charger;Accessories;2;25.00;TX\n"
+    res = client.post(
+        "/api/upload/preview",
+        files={"file": ("semicolon_orders.csv", semi_csv, "text/csv")}
+    )
+    assert res.status_code == 200
+    assert res.json()["total_rows"] == 2
+
+    # CSV with ragged / inconsistent trailing fields that caused C tokenizer error
+    ragged_csv = b"Title Line: Sales Export\nDate: 2026-01-01\nOrderID,CustomerID,OrderDate,ProductName,Category,Quantity,Price,State\n301,C20,2026-01-22,Shoes,Footwear,1,89.00,NY\n302,C21,2026-01-23,Jacket,Apparel,1,120.00,CA,ExtraNoteField\n"
+    res_ragged = client.post(
+        "/api/upload/preview",
+        files={"file": ("ragged_orders.csv", ragged_csv, "text/csv")}
+    )
+    assert res_ragged.status_code == 200
+    assert res_ragged.json()["total_rows"] >= 1
+
 def test_create_company_with_dataset():
     csv_content = b"order_id,customer_id,order_date,product_name,category,quantity,total_amount,shipping_state\n1001,501,2026-02-01,Running Shoes,Footwear,1,120.00,TX\n1002,502,2026-02-02,Yoga Mat,Fitness,2,45.00,CA\n"
     form_data = {

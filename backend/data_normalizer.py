@@ -102,21 +102,99 @@ def detect_column_mapping(df: pd.DataFrame) -> Dict[str, str]:
 
 def read_dataset_file(file_bytes: bytes, filename: str) -> pd.DataFrame:
     """
-    Reads CSV, Excel (.xlsx, .xls), or JSON file bytes into a pandas DataFrame.
+    Reads CSV, Excel (.xlsx, .xls), or JSON file bytes into a pandas DataFrame with multi-tier fallback parsing.
+    Prevents tokenizing C-parser errors, handles variable delimiters, bad lines, and mixed encodings.
     """
     ext = os.path.splitext(filename)[1].lower()
+
     if ext in ['.xlsx', '.xls']:
-        return pd.read_excel(io.BytesIO(file_bytes))
-    elif ext in ['.csv', '.txt', '.tsv']:
         try:
-            return pd.read_csv(io.BytesIO(file_bytes), encoding='utf-8')
-        except UnicodeDecodeError:
-            return pd.read_csv(io.BytesIO(file_bytes), encoding='latin-1')
+            return pd.read_excel(io.BytesIO(file_bytes))
+        except Exception as e:
+            raise ValueError(f"Failed to parse Excel file: {str(e)}")
+
     elif ext == '.json':
         try:
             return pd.read_json(io.BytesIO(file_bytes))
         except Exception:
-            return pd.read_json(io.BytesIO(file_bytes), lines=True)
+            try:
+                return pd.read_json(io.BytesIO(file_bytes), lines=True)
+            except Exception as e:
+                raise ValueError(f"Failed to parse JSON dataset: {str(e)}")
+
+    elif ext in ['.csv', '.txt', '.tsv', '']:
+        # Attempt 1: Standard UTF-8 with C engine
+        try:
+            df = pd.read_csv(io.BytesIO(file_bytes), encoding='utf-8')
+            if df is not None and df.shape[1] >= 2 and df.shape[0] > 0:
+                return df
+        except Exception:
+            pass
+
+        # Attempt 2: Python engine with auto separator detection & bad lines skipping
+        for enc in ['utf-8', 'utf-8-sig', 'latin-1', 'cp1252', 'iso-8859-1']:
+            try:
+                df = pd.read_csv(
+                    io.BytesIO(file_bytes),
+                    encoding=enc,
+                    sep=None,
+                    engine='python',
+                    on_bad_lines='skip'
+                )
+                if df is not None and df.shape[1] >= 2 and df.shape[0] > 0:
+                    return df
+            except Exception:
+                continue
+
+        # Attempt 3: Try specific common delimiters (comma, semicolon, tab, pipe)
+        for delimiter in [',', ';', '\t', '|']:
+            for enc in ['utf-8-sig', 'latin-1', 'cp1252']:
+                try:
+                    df = pd.read_csv(
+                        io.BytesIO(file_bytes),
+                        encoding=enc,
+                        sep=delimiter,
+                        engine='python',
+                        on_bad_lines='skip'
+                    )
+                    if df is not None and df.shape[1] >= 2 and df.shape[0] > 0:
+                        return df
+                except Exception:
+                    continue
+
+        # Attempt 4: Sniff text lines, strip potential comment / header metadata lines
+        try:
+            raw_text = None
+            for enc in ['utf-8', 'latin-1', 'cp1252']:
+                try:
+                    raw_text = file_bytes.decode(enc)
+                    break
+                except Exception:
+                    pass
+
+            if raw_text:
+                lines = [l for l in raw_text.splitlines() if l.strip()]
+                for skip in range(min(10, len(lines))):
+                    sub_text = "\n".join(lines[skip:])
+                    try:
+                        df = pd.read_csv(
+                            io.StringIO(sub_text),
+                            sep=None,
+                            engine='python',
+                            on_bad_lines='skip'
+                        )
+                        if df is not None and df.shape[1] >= 2 and df.shape[0] > 0:
+                            return df
+                    except Exception:
+                        continue
+        except Exception:
+            pass
+
+        # Final Attempt: Simple comma parse with on_bad_lines='skip'
+        try:
+            return pd.read_csv(io.BytesIO(file_bytes), encoding='latin-1', on_bad_lines='skip')
+        except Exception as e:
+            raise ValueError(f"Unable to parse dataset: {str(e)}. Please check file encoding and formatting.")
     else:
         raise ValueError(f"Unsupported file format '{ext}'. Please upload a CSV, Excel (.xlsx/.xls), or JSON file.")
 
