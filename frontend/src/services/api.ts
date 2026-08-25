@@ -26,6 +26,9 @@ import type {
 } from '../types';
 
 const getBaseUrl = (): string => {
+  if (import.meta.env.PROD) {
+    return '/api';
+  }
   let rawUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api').trim();
   rawUrl = rawUrl.replace(/\/+$/, '');
   if (!rawUrl.endsWith('/api') && !rawUrl.includes('/api/')) {
