@@ -26,15 +26,23 @@ import type {
 } from '../types';
 
 const getBaseUrl = (): string => {
+  // 1. If the user provided an API URL via environment variables (like Render), ALWAYS use it!
+  if (import.meta.env.VITE_API_URL) {
+    let rawUrl = import.meta.env.VITE_API_URL.trim();
+    rawUrl = rawUrl.replace(/\/+$/, '');
+    if (!rawUrl.endsWith('/api') && !rawUrl.includes('/api/')) {
+      rawUrl = `${rawUrl}/api`;
+    }
+    return rawUrl;
+  }
+  
+  // 2. If hosted on Vercel but no env var provided, fallback to relative /api
   if (window.location.hostname.includes('vercel.app')) {
     return '/api';
   }
-  let rawUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api').trim();
-  rawUrl = rawUrl.replace(/\/+$/, '');
-  if (!rawUrl.endsWith('/api') && !rawUrl.includes('/api/')) {
-    rawUrl = `${rawUrl}/api`;
-  }
-  return rawUrl;
+  
+  // 3. Fallback for local development
+  return 'http://localhost:8000/api';
 };
 
 const API_BASE_URL = getBaseUrl();
