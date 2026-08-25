@@ -1,0 +1,10 @@
+backend/
+requirements.txt
+tests/
+analytics/
+ml/
+scripts/
+sql/
+data/
+venv/
+.pytest_cache/
