@@ -21,7 +21,14 @@ export const CompanySwitcher: React.FC<CompanySwitcherProps> = ({ currentCompany
 
   useEffect(() => {
     fetchCompanies()
-      .then((data) => setCompanies(data))
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setCompanies(data);
+        } else {
+          console.error('API returned non-array data:', data);
+          setCompanies([]);
+        }
+      })
       .catch((err) => console.error('Failed to load companies in switcher:', err));
   }, []);
 

@@ -26,7 +26,7 @@ import type {
 } from '../types';
 
 const getBaseUrl = (): string => {
-  if (import.meta.env.PROD) {
+  if (window.location.hostname.includes('vercel.app')) {
     return '/api';
   }
   let rawUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api').trim();
