@@ -88,8 +88,8 @@ const CompanyDashboardLayout: React.FC = () => {
         setFilterOptions(opts);
         setFilters((prev) => ({
           ...prev,
-          startDate: opts.min_date,
-          endDate: opts.max_date,
+          startDate: undefined,
+          endDate: undefined,
         }));
       })
       .catch((err) => console.error('Failed to load filter options:', err));
@@ -108,8 +108,8 @@ const CompanyDashboardLayout: React.FC = () => {
     if (filterOptions) {
       setFilters({
         datePreset: 'all',
-        startDate: filterOptions.min_date,
-        endDate: filterOptions.max_date,
+        startDate: undefined,
+        endDate: undefined,
         category: 'All',
         region: 'All',
         channel: 'All',
@@ -165,11 +165,11 @@ const CompanyDashboardLayout: React.FC = () => {
               }
             />
             <Route
-              path="/customers"
+              path="customers"
               element={<CustomerIntelligence filters={filters} companyId={companyId} />}
             />
             <Route
-              path="/products"
+              path="products"
               element={
                 <ProductIntelligence
                   filterOptions={filterOptions}
@@ -179,15 +179,15 @@ const CompanyDashboardLayout: React.FC = () => {
               }
             />
             <Route
-              path="/marketing"
+              path="marketing"
               element={<MarketingAnalytics companyId={companyId} />}
             />
             <Route
-              path="/forecast"
+              path="forecast"
               element={<Forecasting companyId={companyId} />}
             />
             <Route
-              path="/insights"
+              path="insights"
               element={<BusinessInsights filters={filters} companyId={companyId} />}
             />
             <Route

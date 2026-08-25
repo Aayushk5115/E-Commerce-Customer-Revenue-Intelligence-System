@@ -1,0 +1,8 @@
+{
+  "name": "e-commerce-customer-revenue-intelligence-system",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "cd frontend && npm install && npm run build"
+  }
+}
