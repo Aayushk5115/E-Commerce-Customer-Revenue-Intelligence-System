@@ -179,7 +179,16 @@ export const MarketingAnalytics: React.FC<MarketingAnalyticsProps> = ({ companyI
 
   const CHANNEL_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
 
-  if (data && (!data.kpis?.total_revenue && !data.kpis?.total_spend || (data as any).has_dataset === false)) {
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+        <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-slate-500 font-medium animate-pulse">Loading marketing analytics...</p>
+      </div>
+    );
+  }
+
+  if (data && ((!data.kpis?.total_revenue && !data.kpis?.total_spend) || (data as any).has_dataset === false)) {
     return <EmptyDatasetState companyId={activeCompanyId} />;
   }
 
@@ -189,21 +198,21 @@ export const MarketingAnalytics: React.FC<MarketingAnalyticsProps> = ({ companyI
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <KpiCard
           title="Total Ad Spend"
-          value={data ? formatCurrency(data.kpis.total_spend, { compact: true }) : '—'}
+          value={data?.kpis?.total_spend !== undefined && data?.kpis?.total_spend !== null ? formatCurrency(data.kpis.total_spend, { compact: true }) : '—'}
           icon={<DollarSign size={16} />}
           tooltip="Cumulative marketing budget deployed across all campaigns."
         />
 
         <KpiCard
           title="Attributed Revenue"
-          value={data ? formatCurrency(data.kpis.total_revenue, { compact: true }) : '—'}
+          value={data?.kpis?.total_revenue !== undefined && data?.kpis?.total_revenue !== null ? formatCurrency(data.kpis.total_revenue, { compact: true }) : '—'}
           icon={<TrendingUp size={16} />}
           tooltip="Direct revenue generated from ad conversions."
         />
 
         <KpiCard
           title="Blended ROAS"
-          value={data ? data.kpis.overall_roas.toFixed(2) : '—'}
+          value={data?.kpis?.overall_roas !== undefined && data?.kpis?.overall_roas !== null ? data.kpis.overall_roas.toFixed(2) : '—'}
           suffix="x"
           icon={<Target size={16} />}
           tooltip="Return on Ad Spend (Attributed Revenue / Total Spend)."
@@ -211,7 +220,7 @@ export const MarketingAnalytics: React.FC<MarketingAnalyticsProps> = ({ companyI
 
         <KpiCard
           title="Blended CAC"
-          value={data ? formatCurrency(data.kpis.overall_cac, { compact: false, decimals: 2 }) : '—'}
+          value={data?.kpis?.overall_cac !== undefined && data?.kpis?.overall_cac !== null ? formatCurrency(data.kpis.overall_cac, { compact: false, decimals: 2 }) : '—'}
           invertColor={true}
           icon={<Zap size={16} />}
           tooltip="Customer Acquisition Cost (Ad Spend / Conversions)."
@@ -219,7 +228,7 @@ export const MarketingAnalytics: React.FC<MarketingAnalyticsProps> = ({ companyI
 
         <KpiCard
           title="Click-Through Rate"
-          value={data ? data.kpis.ctr.toFixed(2) : '—'}
+          value={data?.kpis?.ctr !== undefined && data?.kpis?.ctr !== null ? data.kpis.ctr.toFixed(2) : '—'}
           suffix="%"
           icon={<MousePointer size={16} />}
           tooltip="Percentage of impressions that resulted in clicks."
@@ -227,7 +236,7 @@ export const MarketingAnalytics: React.FC<MarketingAnalyticsProps> = ({ companyI
 
         <KpiCard
           title="Conversion Rate"
-          value={data ? data.kpis.conversion_rate.toFixed(2) : '—'}
+          value={data?.kpis?.conversion_rate !== undefined && data?.kpis?.conversion_rate !== null ? data.kpis.conversion_rate.toFixed(2) : '—'}
           suffix="%"
           icon={<Percent size={16} />}
           tooltip="Percentage of clicks that converted to completed orders."
@@ -337,7 +346,7 @@ export const MarketingAnalytics: React.FC<MarketingAnalyticsProps> = ({ companyI
                   }}
                 />
                 <Bar dataKey="roas" radius={[6, 6, 0, 0]}>
-                  {data?.channels.map((_, index) => (
+                  {(data?.channels || []).map((_, index) => (
                     <Cell key={`chan-${index}`} fill={CHANNEL_COLORS[index % CHANNEL_COLORS.length]} />
                   ))}
                 </Bar>

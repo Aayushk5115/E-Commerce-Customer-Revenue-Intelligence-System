@@ -77,31 +77,40 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
   const [regionData, setRegionData] = useState<RegionRevenueItem[]>([]);
   const [topProducts, setTopProducts] = useState<TopProductItem[]>([]);
   const [segments, setSegments] = useState<CustomerSegmentItem[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
     let isMounted = true;
     const loadAll = async () => {
+      setIsLoading(true);
       try {
         const [kpiRes, trendRes, catRes, regRes, topProdRes, segRes, metaRes] = await Promise.all([
-          fetchExecutiveKpis(activeCompanyId, filters),
-          fetchRevenueTrend(activeCompanyId, filters),
-          fetchRevenueByCategory(activeCompanyId, filters),
-          fetchRevenueByRegion(activeCompanyId, filters, 8),
-          fetchTopProducts(activeCompanyId, filters, 8),
-          fetchCustomerSegments(activeCompanyId),
+          fetchExecutiveKpis(activeCompanyId, filters).catch((err) => {
+            console.error('fetchExecutiveKpis error:', err);
+            return null;
+          }),
+          fetchRevenueTrend(activeCompanyId, filters).catch(() => []),
+          fetchRevenueByCategory(activeCompanyId, filters).catch(() => []),
+          fetchRevenueByRegion(activeCompanyId, filters, 8).catch(() => []),
+          fetchTopProducts(activeCompanyId, filters, 8).catch(() => []),
+          fetchCustomerSegments(activeCompanyId).catch(() => []),
           fetchCompanyDetail(activeCompanyId).catch(() => null),
         ]);
         if (isMounted) {
           setKpis(kpiRes);
-          setTrend(trendRes);
-          setCategoryData(catRes);
-          setRegionData(regRes);
-          setTopProducts(topProdRes);
-          setSegments(segRes);
-          if (metaRes) setCompanyMeta(metaRes);
+          setTrend(Array.isArray(trendRes) ? trendRes : []);
+          setCategoryData(Array.isArray(catRes) ? catRes : []);
+          setRegionData(Array.isArray(regRes) ? regRes : []);
+          setTopProducts(Array.isArray(topProdRes) ? topProdRes : []);
+          setSegments(Array.isArray(segRes) ? segRes : []);
+          if (metaRes && typeof metaRes === 'object' && metaRes.company_name) {
+            setCompanyMeta(metaRes);
+          }
         }
       } catch (err) {
         console.error('Error fetching Executive Overview:', err);
+      } finally {
+        if (isMounted) setIsLoading(false);
       }
     };
     loadAll();
@@ -111,6 +120,15 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
   }, [activeCompanyId, filters]);
 
   const CATEGORY_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
+
+  if (isLoading && !kpis) {
+    return (
+      <div className="py-24 text-center space-y-3">
+        <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
+        <p className="text-sm font-semibold text-slate-400">Loading executive intelligence...</p>
+      </div>
+    );
+  }
 
   if (kpis && (!kpis.total_orders || (kpis as any).has_dataset === false)) {
     return <EmptyDatasetState companyId={activeCompanyId} />;
@@ -202,39 +220,39 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
 
         <KpiCard
           title="Total Orders"
-          value={kpis ? (kpis.total_orders / 1000).toFixed(1) : '—'}
-          suffix="k"
+          value={kpis && kpis.total_orders !== undefined && kpis.total_orders !== null ? (kpis.total_orders >= 1000 ? (kpis.total_orders / 1000).toFixed(1) : kpis.total_orders.toLocaleString()) : '—'}
+          suffix={kpis && kpis.total_orders !== undefined && kpis.total_orders !== null && kpis.total_orders >= 1000 ? "k" : ""}
           changePct={kpis?.orders_change_pct}
-          prevValue={kpis ? (kpis.prev_orders / 1000).toFixed(1) : undefined}
+          prevValue={kpis && kpis.prev_orders !== undefined && kpis.prev_orders !== null ? (kpis.prev_orders >= 1000 ? (kpis.prev_orders / 1000).toFixed(1) : kpis.prev_orders.toLocaleString()) : undefined}
           icon={<Package size={18} />}
           tooltip="Total count of non-cancelled order transactions."
         />
 
         <KpiCard
           title="Active Customers"
-          value={kpis ? (kpis.total_customers / 1000).toFixed(1) : '—'}
-          suffix="k"
+          value={kpis && kpis.total_customers !== undefined && kpis.total_customers !== null ? (kpis.total_customers >= 1000 ? (kpis.total_customers / 1000).toFixed(1) : kpis.total_customers.toLocaleString()) : '—'}
+          suffix={kpis && kpis.total_customers !== undefined && kpis.total_customers !== null && kpis.total_customers >= 1000 ? "k" : ""}
           changePct={kpis?.customers_change_pct}
-          prevValue={kpis ? (kpis.prev_customers / 1000).toFixed(1) : undefined}
+          prevValue={kpis && kpis.prev_customers !== undefined && kpis.prev_customers !== null ? (kpis.prev_customers >= 1000 ? (kpis.prev_customers / 1000).toFixed(1) : kpis.prev_customers.toLocaleString()) : undefined}
           icon={<Users size={18} />}
           tooltip="Unique customers with purchasing activity in this period."
         />
 
         <KpiCard
           title="Customer Retention Rate"
-          value={kpis ? (kpis.retention_rate * 100).toFixed(1) : '—'}
-          suffix="%"
+          value={kpis && kpis.retention_rate !== null && kpis.retention_rate !== undefined ? (kpis.retention_rate * 100).toFixed(1) : '—'}
+          suffix={kpis && kpis.retention_rate !== null && kpis.retention_rate !== undefined ? "%" : ""}
           changePct={kpis?.retention_change_pct}
-          prevValue={kpis ? (kpis.prev_retention_rate * 100).toFixed(1) : undefined}
+          prevValue={kpis && kpis.prev_retention_rate !== null && kpis.prev_retention_rate !== undefined ? (kpis.prev_retention_rate * 100).toFixed(1) : undefined}
           icon={<Repeat size={18} />}
           tooltip="Percentage of customers with more than 1 completed purchase."
         />
 
         <KpiCard
           title="Revenue Growth Rate"
-          value={kpis ? kpis.revenue_growth.toFixed(1) : '—'}
-          prefix={kpis && kpis.revenue_growth >= 0 ? '+' : ''}
-          suffix="%"
+          value={kpis && kpis.revenue_growth !== null && kpis.revenue_growth !== undefined ? kpis.revenue_growth.toFixed(1) : '—'}
+          prefix={kpis && kpis.revenue_growth !== null && kpis.revenue_growth !== undefined && kpis.revenue_growth >= 0 ? '+' : ''}
+          suffix={kpis && kpis.revenue_growth !== null && kpis.revenue_growth !== undefined ? "%" : ""}
           changePct={kpis?.revenue_growth}
           icon={<Activity size={18} />}
           periodLabel="vs baseline"
@@ -351,7 +369,7 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
                   paddingAngle={3}
                   dataKey="value"
                 >
-                  {segments.map((entry, index) => (
+                  {(segments || []).map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color || CATEGORY_COLORS[index % CATEGORY_COLORS.length]} />
                   ))}
                 </Pie>
@@ -374,7 +392,7 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
 
           {/* Quick Segment Legend Pills */}
           <div className="grid grid-cols-2 gap-1.5 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px]">
-            {segments.slice(0, 4).map((s, i) => (
+            {(segments || []).slice(0, 4).map((s, i) => (
               <div key={i} className="flex items-center justify-between p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800/50">
                 <span className="flex items-center gap-1.5 truncate">
                   <span className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }}></span>
@@ -422,7 +440,7 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
                   }}
                 />
                 <Bar dataKey="revenue" radius={[6, 6, 0, 0]}>
-                  {categoryData.map((_, index) => (
+                  {(categoryData || []).map((_, index) => (
                     <Cell key={`cat-${index}`} fill={CATEGORY_COLORS[index % CATEGORY_COLORS.length]} />
                   ))}
                 </Bar>
@@ -444,7 +462,7 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
 
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={regionData} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 0 }}>
+              <BarChart data={regionData || []} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(var(--border))" opacity={0.6} />
                 <XAxis
                   type="number"
@@ -482,7 +500,7 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
           </div>
 
           <div className="space-y-2.5 overflow-y-auto max-h-64 pr-1">
-            {topProducts.map((p, idx) => (
+            {(topProducts || []).map((p, idx) => (
               <div
                 key={p.product_id}
                 className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
@@ -503,7 +521,7 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
                     {formatCurrency(p.revenue, { compact: true })}
                   </div>
                   <span className="text-[10px] text-emerald-600 font-medium">
-                    {(p.margin * 100).toFixed(0)}% margin
+                    {p.margin !== null && p.margin !== undefined ? (p.margin * 100).toFixed(0) : '0'}% margin
                   </span>
                 </div>
               </div>

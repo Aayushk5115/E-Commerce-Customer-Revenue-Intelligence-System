@@ -21,10 +21,12 @@ import type { CompanyMetadata, DatasetProfileResponse } from '../../types';
 interface DatasetDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  company: CompanyMetadata;
-  onOpenViewDataset: () => void;
-  onOpenRemoveDataset: () => void;
-  onOpenUploadDataset: () => void;
+  company?: CompanyMetadata | null;
+  onOpenViewDataset?: () => void;
+  onOpenRemoveDataset?: () => void;
+  onOpenUploadDataset?: () => void;
+  onDatasetRemoved?: () => void;
+  onUploadDataset?: () => void;
 }
 
 export const DatasetDetailsModal: React.FC<DatasetDetailsModalProps> = ({
@@ -34,12 +36,14 @@ export const DatasetDetailsModal: React.FC<DatasetDetailsModalProps> = ({
   onOpenViewDataset,
   onOpenRemoveDataset,
   onOpenUploadDataset,
+  onDatasetRemoved,
+  onUploadDataset,
 }) => {
   const [profile, setProfile] = useState<DatasetProfileResponse | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !company?.company_id) return;
 
     let isMounted = true;
     const loadProfile = async () => {
@@ -58,9 +62,9 @@ export const DatasetDetailsModal: React.FC<DatasetDetailsModalProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [isOpen, company.company_id]);
+  }, [isOpen, company?.company_id]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !company) return null;
 
   const hasDataset = company.dataset_status !== 'NO_DATASET' && (company.total_orders || 0) > 0;
 
@@ -241,7 +245,8 @@ export const DatasetDetailsModal: React.FC<DatasetDetailsModalProps> = ({
               <button
                 onClick={() => {
                   onClose();
-                  onOpenUploadDataset();
+                  if (onOpenUploadDataset) onOpenUploadDataset();
+                  else if (onUploadDataset) onUploadDataset();
                 }}
                 className="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors shadow-sm inline-flex items-center space-x-1.5 cursor-pointer"
               >
@@ -259,7 +264,8 @@ export const DatasetDetailsModal: React.FC<DatasetDetailsModalProps> = ({
               <button
                 onClick={() => {
                   onClose();
-                  onOpenRemoveDataset();
+                  if (onOpenRemoveDataset) onOpenRemoveDataset();
+                  else if (onDatasetRemoved) onDatasetRemoved();
                 }}
                 className="px-3 py-1.5 text-xs font-bold text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors flex items-center space-x-1 self-start sm:self-auto cursor-pointer"
               >
@@ -271,7 +277,8 @@ export const DatasetDetailsModal: React.FC<DatasetDetailsModalProps> = ({
                 <button
                   onClick={() => {
                     onClose();
-                    onOpenUploadDataset();
+                    if (onOpenUploadDataset) onOpenUploadDataset();
+                    else if (onUploadDataset) onUploadDataset();
                   }}
                   className="px-3.5 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                 >
@@ -281,7 +288,7 @@ export const DatasetDetailsModal: React.FC<DatasetDetailsModalProps> = ({
                 <button
                   onClick={() => {
                     onClose();
-                    onOpenViewDataset();
+                    if (onOpenViewDataset) onOpenViewDataset();
                   }}
                   className="px-4 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors shadow-sm flex items-center space-x-1.5 cursor-pointer"
                 >

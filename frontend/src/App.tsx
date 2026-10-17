@@ -11,6 +11,7 @@ import { Forecasting } from './pages/Forecasting';
 import { BusinessInsights } from './pages/BusinessInsights';
 import { fetchFilterOptions, fetchCompanyDetail } from './services/api';
 import { CurrencyProvider, useCurrency } from './context/CurrencyContext';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 import type { FilterOptions, FilterState, CompanyMetadata } from './types';
 
 // Page Title Mapping Helper
@@ -151,58 +152,60 @@ const CompanyDashboardLayout: React.FC = () => {
 
         {/* Company Analytics Sub-modules */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
-          <Routes>
-            <Route
-              path="/"
-              element={
-                <ExecutiveOverview
-                  filterOptions={filterOptions}
-                  filters={filters}
-                  onFilterChange={setFilters}
-                  onResetFilters={handleResetFilters}
-                  companyId={companyId}
-                />
-              }
-            />
-            <Route
-              path="customers"
-              element={<CustomerIntelligence filters={filters} companyId={companyId} />}
-            />
-            <Route
-              path="products"
-              element={
-                <ProductIntelligence
-                  filterOptions={filterOptions}
-                  filters={filters}
-                  companyId={companyId}
-                />
-              }
-            />
-            <Route
-              path="marketing"
-              element={<MarketingAnalytics companyId={companyId} />}
-            />
-            <Route
-              path="forecast"
-              element={<Forecasting companyId={companyId} />}
-            />
-            <Route
-              path="insights"
-              element={<BusinessInsights filters={filters} companyId={companyId} />}
-            />
-            <Route
-              path="*"
-              element={
-                <ExecutiveOverview
-                  filterOptions={filterOptions}
-                  filters={filters}
-                  onFilterChange={setFilters}
-                  onResetFilters={handleResetFilters}
-                  companyId={companyId}
-                />
-              }
-            />
-          </Routes>
+          <ErrorBoundary>
+            <Routes>
+              <Route
+                path="/"
+                element={
+                  <ExecutiveOverview
+                    filterOptions={filterOptions}
+                    filters={filters}
+                    onFilterChange={setFilters}
+                    onResetFilters={handleResetFilters}
+                    companyId={companyId}
+                  />
+                }
+              />
+              <Route
+                path="customers"
+                element={<CustomerIntelligence filters={filters} companyId={companyId} />}
+              />
+              <Route
+                path="products"
+                element={
+                  <ProductIntelligence
+                    filterOptions={filterOptions}
+                    filters={filters}
+                    companyId={companyId}
+                  />
+                }
+              />
+              <Route
+                path="marketing"
+                element={<MarketingAnalytics companyId={companyId} />}
+              />
+              <Route
+                path="forecast"
+                element={<Forecasting companyId={companyId} />}
+              />
+              <Route
+                path="insights"
+                element={<BusinessInsights filters={filters} companyId={companyId} />}
+              />
+              <Route
+                path="*"
+                element={
+                  <ExecutiveOverview
+                    filterOptions={filterOptions}
+                    filters={filters}
+                    onFilterChange={setFilters}
+                    onResetFilters={handleResetFilters}
+                    companyId={companyId}
+                  />
+                }
+              />
+            </Routes>
+          </ErrorBoundary>
         </main>
       </div>
     </div>
@@ -212,25 +215,27 @@ const CompanyDashboardLayout: React.FC = () => {
 export default function App() {
   return (
     <CurrencyProvider>
-      <Router>
-        <Routes>
-          {/* Public Home Page - Company Catalog & Platform Overview */}
-          <Route path="/" element={<HomePage />} />
+      <ErrorBoundary>
+        <Router>
+          <Routes>
+            {/* Public Home Page - Company Catalog & Platform Overview */}
+            <Route path="/" element={<HomePage />} />
 
-          {/* Company-Specific Analytics Dashboard Route */}
-          <Route path="/company/:companyId/*" element={<CompanyDashboardLayout />} />
+            {/* Company-Specific Analytics Dashboard Route */}
+            <Route path="/company/:companyId/*" element={<CompanyDashboardLayout />} />
 
-          {/* Legacy route redirects for backward compatibility */}
-          <Route path="/customers" element={<Navigate to="/company/company-1/customers" replace />} />
-          <Route path="/products" element={<Navigate to="/company/company-1/products" replace />} />
-          <Route path="/marketing" element={<Navigate to="/company/company-1/marketing" replace />} />
-          <Route path="/forecast" element={<Navigate to="/company/company-1/forecast" replace />} />
-          <Route path="/insights" element={<Navigate to="/company/company-1/insights" replace />} />
+            {/* Legacy route redirects for backward compatibility */}
+            <Route path="/customers" element={<Navigate to="/company/company-1/customers" replace />} />
+            <Route path="/products" element={<Navigate to="/company/company-1/products" replace />} />
+            <Route path="/marketing" element={<Navigate to="/company/company-1/marketing" replace />} />
+            <Route path="/forecast" element={<Navigate to="/company/company-1/forecast" replace />} />
+            <Route path="/insights" element={<Navigate to="/company/company-1/insights" replace />} />
 
-          {/* Catch-all redirect to Home Page */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Router>
+            {/* Catch-all redirect to Home Page */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Router>
+      </ErrorBoundary>
     </CurrencyProvider>
   );
 }

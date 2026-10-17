@@ -16,14 +16,22 @@ import type { CompanyMetadata } from '../../types';
 interface ViewDatasetModalProps {
   isOpen: boolean;
   onClose: () => void;
-  company: CompanyMetadata;
+  company?: CompanyMetadata | null;
+  companyId?: string;
+  companyName?: string;
 }
 
 export const ViewDatasetModal: React.FC<ViewDatasetModalProps> = ({
   isOpen,
   onClose,
   company,
+  companyId,
+  companyName,
 }) => {
+  const activeCompanyId = company?.company_id || companyId || '';
+  const activeCompanyName = company?.company_name || companyName || 'Company Dataset';
+  const activeDatasetFile = company?.dataset_file || 'Standard Normalized Records';
+
   const [rows, setRows] = useState<Record<string, any>[]>([]);
   const [columns, setColumns] = useState<string[]>([]);
   const [totalRecords, setTotalRecords] = useState<number>(0);
@@ -35,14 +43,14 @@ export const ViewDatasetModal: React.FC<ViewDatasetModalProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !activeCompanyId) return;
 
     let isMounted = true;
     const loadDataset = async () => {
       setIsLoading(true);
       setError(null);
       try {
-        const data = await fetchRawDataset(company.company_id, currentPage, pageSize, searchQuery);
+        const data = await fetchRawDataset(activeCompanyId, currentPage, pageSize, searchQuery);
         if (isMounted) {
           setRows(data.rows || []);
           setColumns(data.columns || []);
@@ -63,7 +71,7 @@ export const ViewDatasetModal: React.FC<ViewDatasetModalProps> = ({
       isMounted = false;
       clearTimeout(debounceTimer);
     };
-  }, [isOpen, company.company_id, currentPage, pageSize, searchQuery]);
+  }, [isOpen, activeCompanyId, currentPage, pageSize, searchQuery]);
 
   if (!isOpen) return null;
 
@@ -82,11 +90,11 @@ export const ViewDatasetModal: React.FC<ViewDatasetModalProps> = ({
                   Dataset Explorer
                 </h3>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
-                  {company.company_name}
+                  {activeCompanyName}
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                {company.dataset_file || 'Standard Normalized Records'} • Showing {totalRecords.toLocaleString()} total rows
+                {activeDatasetFile} • Showing {(totalRecords || 0).toLocaleString()} total rows
               </p>
             </div>
           </div>
@@ -188,7 +196,7 @@ export const ViewDatasetModal: React.FC<ViewDatasetModalProps> = ({
                   <th className="py-2.5 px-3 font-extrabold text-slate-500 uppercase tracking-wider text-[10px] w-12 text-center">
                     #
                   </th>
-                  {columns.map((col) => (
+                  {(columns || []).map((col) => (
                     <th
                       key={col}
                       className="py-2.5 px-3 font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider text-[11px] whitespace-nowrap"
@@ -199,7 +207,7 @@ export const ViewDatasetModal: React.FC<ViewDatasetModalProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-mono">
-                {rows.map((row, idx) => (
+                {(rows || []).map((row, idx) => (
                   <tr
                     key={idx}
                     className="hover:bg-blue-50/40 dark:hover:bg-blue-950/20 transition-colors"
@@ -207,7 +215,7 @@ export const ViewDatasetModal: React.FC<ViewDatasetModalProps> = ({
                     <td className="py-2 px-3 text-center text-[10px] text-slate-400 font-sans">
                       {(currentPage - 1) * pageSize + idx + 1}
                     </td>
-                    {columns.map((col) => (
+                    {(columns || []).map((col) => (
                       <td
                         key={col}
                         className="py-2 px-3 text-slate-800 dark:text-slate-200 whitespace-nowrap max-w-xs truncate"

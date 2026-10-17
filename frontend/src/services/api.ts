@@ -52,6 +52,17 @@ const api = axios.create({
   timeout: 180000,
 });
 
+// Guard against HTML error pages returned when backend is unreachable or redirected by Vercel
+api.interceptors.response.use(
+  (response) => {
+    if (typeof response.data === 'string' && response.data.trim().startsWith('<!DOCTYPE')) {
+      return Promise.reject(new Error('Backend API returned HTML instead of JSON. Server may be offline or misconfigured.'));
+    }
+    return response;
+  },
+  (error) => Promise.reject(error)
+);
+
 const buildParams = (filters?: FilterState) => {
   const params: Record<string, string> = {};
   if (!filters) return params;

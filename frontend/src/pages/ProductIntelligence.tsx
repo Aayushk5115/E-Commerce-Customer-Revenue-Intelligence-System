@@ -59,6 +59,7 @@ export const ProductIntelligence: React.FC<ProductIntelligenceProps> = ({
 
   const [kpis, setKpis] = useState<ProductKpis | null>(null);
   const [perf, setPerf] = useState<ProductPerformance | null>(null);
+  const [isOverviewLoading, setIsOverviewLoading] = useState<boolean>(true);
 
   // Table state
   const [products, setProducts] = useState<ProductRecord[]>([]);
@@ -75,20 +76,35 @@ export const ProductIntelligence: React.FC<ProductIntelligenceProps> = ({
 
   // Load Overview Data
   useEffect(() => {
+    let isMounted = true;
     const loadOverview = async () => {
+      setIsOverviewLoading(true);
       try {
         const [kpiRes, perfRes] = await Promise.all([
-          fetchProductKpis(activeCompanyId, filters, selectedBrand),
-          fetchProductPerformance(activeCompanyId, filters, selectedBrand),
+          fetchProductKpis(activeCompanyId, filters, selectedBrand).catch((err) => {
+            console.error('fetchProductKpis error:', err);
+            return null;
+          }),
+          fetchProductPerformance(activeCompanyId, filters, selectedBrand).catch((err) => {
+            console.error('fetchProductPerformance error:', err);
+            return null;
+          }),
         ]);
-        setKpis(kpiRes);
-        setPerf(perfRes);
+        if (isMounted) {
+          setKpis(kpiRes);
+          setPerf(perfRes);
+        }
       } catch (err) {
         console.error('Error fetching Product Intelligence:', err);
+      } finally {
+        if (isMounted) setIsOverviewLoading(false);
       }
     };
 
     loadOverview();
+    return () => {
+      isMounted = false;
+    };
   }, [activeCompanyId, filters, selectedBrand]);
 
   // Load Paginated Product Table
@@ -246,6 +262,15 @@ export const ProductIntelligence: React.FC<ProductIntelligenceProps> = ({
     },
   ];
 
+  if (isOverviewLoading && !kpis) {
+    return (
+      <div className="py-24 text-center space-y-3">
+        <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
+        <p className="text-sm font-semibold text-slate-400">Loading product intelligence...</p>
+      </div>
+    );
+  }
+
   if (kpis && (!kpis.total_products || (kpis as any).has_dataset === false)) {
     return <EmptyDatasetState companyId={activeCompanyId} />;
   }
@@ -265,8 +290,8 @@ export const ProductIntelligence: React.FC<ProductIntelligenceProps> = ({
 
         <KpiCard
           title="Total Units Sold"
-          value={kpis ? (kpis.units_sold / 1000).toFixed(1) : '—'}
-          suffix="k"
+          value={kpis && kpis.units_sold !== undefined && kpis.units_sold !== null ? (kpis.units_sold >= 1000 ? (kpis.units_sold / 1000).toFixed(1) : kpis.units_sold.toLocaleString()) : '—'}
+          suffix={kpis && kpis.units_sold !== undefined && kpis.units_sold !== null && kpis.units_sold >= 1000 ? "k" : ""}
           icon={<ShoppingBag size={18} />}
           tooltip="Total item volume sold across completed transactions."
         />
@@ -287,16 +312,16 @@ export const ProductIntelligence: React.FC<ProductIntelligenceProps> = ({
 
         <KpiCard
           title="Average SKU Margin"
-          value={hasProfit && kpis ? (kpis.avg_margin * 100).toFixed(1) : (!hasProfit ? 'Unavailable' : '—')}
-          suffix={hasProfit ? "%" : ""}
+          value={hasProfit && kpis && kpis.avg_margin !== null && kpis.avg_margin !== undefined ? (kpis.avg_margin * 100).toFixed(1) : (!hasProfit ? 'Unavailable' : '—')}
+          suffix={hasProfit && kpis && kpis.avg_margin !== null && kpis.avg_margin !== undefined ? "%" : ""}
           icon={<Percent size={18} />}
           tooltip={hasProfit ? "Average profit margin realized across product sales." : "Margin analysis unavailable without cost data."}
         />
 
         <KpiCard
           title="Product Return Rate"
-          value={kpis ? (kpis.avg_return_rate * 100).toFixed(1) : '—'}
-          suffix="%"
+          value={kpis && kpis.avg_return_rate !== null && kpis.avg_return_rate !== undefined ? (kpis.avg_return_rate * 100).toFixed(1) : '—'}
+          suffix={kpis && kpis.avg_return_rate !== null && kpis.avg_return_rate !== undefined ? "%" : ""}
           invertColor={true}
           icon={<RotateCcw size={18} />}
           tooltip="Average percentage of sold items returned by customers."
@@ -352,7 +377,7 @@ export const ProductIntelligence: React.FC<ProductIntelligenceProps> = ({
                   }}
                 />
                 <Bar dataKey="revenue" radius={[6, 6, 0, 0]}>
-                  {perf?.category_performance.map((_, index) => (
+                  {(perf?.category_performance || []).map((_, index) => (
                     <Cell key={`cat-rev-${index}`} fill={CATEGORY_COLORS[index % CATEGORY_COLORS.length]} />
                   ))}
                 </Bar>
@@ -605,7 +630,7 @@ export const ProductIntelligence: React.FC<ProductIntelligenceProps> = ({
               className="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-2 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium"
             >
               <option value="All">All Categories</option>
-              {filterOptions?.categories.map((c) => (
+              {(filterOptions?.categories || []).map((c) => (
                 <option key={c} value={c}>
                   {c}
                 </option>

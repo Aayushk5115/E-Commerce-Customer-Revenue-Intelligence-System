@@ -35,10 +35,12 @@ export const Forecasting: React.FC<ForecastingProps> = ({ companyId: propCompany
 
   const [horizon, setHorizon] = useState<number>(6);
   const [forecastData, setForecastData] = useState<ForecastResponse | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
     let isMounted = true;
     const loadData = async () => {
+      setIsLoading(true);
       try {
         const res = await fetchForecast(activeCompanyId, horizon);
         if (isMounted) {
@@ -46,6 +48,8 @@ export const Forecasting: React.FC<ForecastingProps> = ({ companyId: propCompany
         }
       } catch (err) {
         console.error('Error loading forecast data:', err);
+      } finally {
+        if (isMounted) setIsLoading(false);
       }
     };
 
@@ -54,6 +58,15 @@ export const Forecasting: React.FC<ForecastingProps> = ({ companyId: propCompany
       isMounted = false;
     };
   }, [activeCompanyId, horizon]);
+
+  if (isLoading && !forecastData) {
+    return (
+      <div className="py-24 text-center space-y-3">
+        <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
+        <p className="text-sm font-semibold text-slate-400">Computing ARIMA revenue forecasts...</p>
+      </div>
+    );
+  }
 
   if (forecastData && (!forecastData.combined || forecastData.combined.length === 0 || (forecastData as any).has_dataset === false)) {
     return <EmptyDatasetState companyId={activeCompanyId} />;
@@ -120,7 +133,7 @@ export const Forecasting: React.FC<ForecastingProps> = ({ companyId: propCompany
 
         <KpiCard
           title="Expected Growth Velocity"
-          value={forecastData ? forecastData.expected_growth.toFixed(1) : '—'}
+          value={forecastData && forecastData.expected_growth !== undefined && forecastData.expected_growth !== null ? forecastData.expected_growth.toFixed(1) : '—'}
           prefix="+"
           suffix="%"
           changePct={forecastData?.expected_growth}
@@ -258,7 +271,7 @@ export const Forecasting: React.FC<ForecastingProps> = ({ companyId: propCompany
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {forecastData?.models.map((m, idx) => (
+          {(forecastData?.models || []).map((m, idx) => (
             <div
               key={idx}
               className={`p-4 rounded-xl border transition-all flex flex-col justify-between ${

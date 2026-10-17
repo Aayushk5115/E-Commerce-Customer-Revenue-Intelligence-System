@@ -82,29 +82,43 @@ export const CustomerIntelligence: React.FC<CustomerIntelligenceProps> = ({ filt
   const [selectedRiskFilter, setSelectedRiskFilter] = useState<string>('All');
   const [isTableLoading, setIsTableLoading] = useState<boolean>(false);
 
+  const [isOverviewLoading, setIsOverviewLoading] = useState<boolean>(true);
+
   // Load Overview Data
   useEffect(() => {
+    let isMounted = true;
     const loadOverview = async () => {
+      setIsOverviewLoading(true);
       try {
         const [kpiRes, segRes, churnRes, clvRes, retRes, cohortRes] = await Promise.all([
-          fetchCustomerKpis(activeCompanyId, filters),
-          fetchCustomerSegments(activeCompanyId),
-          fetchChurnAnalytics(activeCompanyId),
-          fetchClvDistribution(activeCompanyId),
-          fetchCustomerRetentionTrend(activeCompanyId),
-          fetchCohorts(activeCompanyId),
+          fetchCustomerKpis(activeCompanyId, filters).catch((err) => {
+            console.error('fetchCustomerKpis error:', err);
+            return null;
+          }),
+          fetchCustomerSegments(activeCompanyId).catch(() => []),
+          fetchChurnAnalytics(activeCompanyId).catch(() => null),
+          fetchClvDistribution(activeCompanyId).catch(() => []),
+          fetchCustomerRetentionTrend(activeCompanyId).catch(() => []),
+          fetchCohorts(activeCompanyId).catch(() => null),
         ]);
-        setKpis(kpiRes);
-        setSegments(segRes);
-        setChurn(churnRes);
-        setClvData(clvRes);
-        setRetentionTrend(retRes);
-        setCohorts(cohortRes);
+        if (isMounted) {
+          setKpis(kpiRes);
+          setSegments(Array.isArray(segRes) ? segRes : []);
+          setChurn(churnRes);
+          setClvData(Array.isArray(clvRes) ? clvRes : []);
+          setRetentionTrend(Array.isArray(retRes) ? retRes : []);
+          setCohorts(cohortRes);
+        }
       } catch (err) {
         console.error('Error loading Customer Intelligence:', err);
+      } finally {
+        if (isMounted) setIsOverviewLoading(false);
       }
     };
     loadOverview();
+    return () => {
+      isMounted = false;
+    };
   }, [activeCompanyId, filters]);
 
   // Load Paginated Customer Table Data
@@ -239,7 +253,7 @@ export const CustomerIntelligence: React.FC<CustomerIntelligenceProps> = ({ filt
       sortable: true,
       align: 'center',
       render: (row) => {
-        const probPct = (row.churn_probability * 100).toFixed(0);
+        const probPct = (row.churn_probability !== null && row.churn_probability !== undefined ? row.churn_probability * 100 : 0).toFixed(0);
         let badgeColor = 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400';
         if (row.risk_level === 'High Risk') {
           badgeColor = 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400';
@@ -264,6 +278,15 @@ export const CustomerIntelligence: React.FC<CustomerIntelligenceProps> = ({ filt
       render: (row) => <span className="text-slate-500 font-mono text-[11px]">{row.last_order_date}</span>,
     },
   ];
+
+  if (isOverviewLoading && !kpis) {
+    return (
+      <div className="py-24 text-center space-y-3">
+        <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
+        <p className="text-sm font-semibold text-slate-400">Loading customer intelligence...</p>
+      </div>
+    );
+  }
 
   if (kpis && (!kpis.total_customers || (kpis as any).has_dataset === false)) {
     return <EmptyDatasetState companyId={activeCompanyId} />;
@@ -296,8 +319,8 @@ export const CustomerIntelligence: React.FC<CustomerIntelligenceProps> = ({ filt
 
         <KpiCard
           title="Repeat Purchase Rate"
-          value={kpis ? (kpis.repeat_purchase_rate * 100).toFixed(1) : '—'}
-          suffix="%"
+          value={kpis && kpis.repeat_purchase_rate !== null && kpis.repeat_purchase_rate !== undefined ? (kpis.repeat_purchase_rate * 100).toFixed(1) : '—'}
+          suffix={kpis && kpis.repeat_purchase_rate !== null && kpis.repeat_purchase_rate !== undefined ? "%" : ""}
           icon={<Repeat size={18} />}
           tooltip="Percentage of buyers who made 2 or more purchases."
         />
@@ -311,8 +334,8 @@ export const CustomerIntelligence: React.FC<CustomerIntelligenceProps> = ({ filt
 
         <KpiCard
           title="Predicted Churn Rate"
-          value={kpis ? (kpis.churn_rate * 100).toFixed(1) : '—'}
-          suffix="%"
+          value={kpis && kpis.churn_rate !== null && kpis.churn_rate !== undefined ? (kpis.churn_rate * 100).toFixed(1) : '—'}
+          suffix={kpis && kpis.churn_rate !== null && kpis.churn_rate !== undefined ? "%" : ""}
           invertColor={true}
           icon={<TrendingDown size={18} />}
           tooltip="Percentage of customers classified as High Churn Risk by ML model."
@@ -362,7 +385,7 @@ export const CustomerIntelligence: React.FC<CustomerIntelligenceProps> = ({ filt
                   paddingAngle={2}
                   dataKey="value"
                 >
-                  {segments.map((entry, index) => (
+                  {(segments || []).map((entry, index) => (
                     <Cell key={`seg-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
@@ -416,7 +439,7 @@ export const CustomerIntelligence: React.FC<CustomerIntelligenceProps> = ({ filt
                   }}
                 />
                 <Bar dataKey="count" radius={[0, 6, 6, 0]}>
-                  {churn?.distribution.map((entry, index) => (
+                  {(churn?.distribution || []).map((entry, index) => (
                     <Cell key={`churn-${index}`} fill={entry.color} />
                   ))}
                 </Bar>
@@ -526,7 +549,7 @@ export const CustomerIntelligence: React.FC<CustomerIntelligenceProps> = ({ filt
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {churn.models.map((m, idx) => (
+            {(churn.models || []).map((m, idx) => (
               <div
                 key={idx}
                 className={`p-4 rounded-xl border transition-all ${
@@ -579,7 +602,7 @@ export const CustomerIntelligence: React.FC<CustomerIntelligenceProps> = ({ filt
               Top Predictive Churn Feature Weights
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5">
-              {churn.feature_importance.map((f, i) => (
+              {(churn.feature_importance || []).map((f, i) => (
                 <div key={i} className="bg-slate-900 p-2.5 rounded-xl border border-slate-800 text-xs">
                   <div className="flex justify-between items-center mb-1">
                     <span className="text-slate-300 font-medium truncate" title={f.feature}>

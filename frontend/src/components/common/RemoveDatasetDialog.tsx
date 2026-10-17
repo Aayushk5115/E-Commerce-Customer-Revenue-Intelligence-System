@@ -6,27 +6,39 @@ import type { CompanyMetadata } from '../../types';
 interface RemoveDatasetDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  company: CompanyMetadata;
-  onDatasetRemoved: (updatedCompany: CompanyMetadata) => void;
+  company?: CompanyMetadata | null;
+  companyId?: string;
+  companyName?: string;
+  onDatasetRemoved?: (updatedCompany?: CompanyMetadata) => void;
 }
 
 export const RemoveDatasetDialog: React.FC<RemoveDatasetDialogProps> = ({
   isOpen,
   onClose,
   company,
+  companyId,
+  companyName,
   onDatasetRemoved,
 }) => {
+  const activeCompanyId = company?.company_id || companyId || '';
+  const activeCompanyName = company?.company_name || companyName || 'This Company';
+  const activeDatasetFile = company?.dataset_file || 'Standard Dataset';
+  const activeTotalOrders = company?.total_orders?.toLocaleString() || '0';
+
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
   const handleConfirmRemove = async () => {
+    if (!activeCompanyId) return;
     setIsDeleting(true);
     setError(null);
     try {
-      const res = await deleteCompanyDataset(company.company_id);
-      onDatasetRemoved(res.company);
+      const res = await deleteCompanyDataset(activeCompanyId);
+      if (onDatasetRemoved) {
+        onDatasetRemoved(res.company);
+      }
       onClose();
     } catch (err: any) {
       setError(err?.response?.data?.detail || err?.message || 'Failed to remove dataset.');
@@ -48,7 +60,7 @@ export const RemoveDatasetDialog: React.FC<RemoveDatasetDialogProps> = ({
               <h3 className="text-base font-bold text-slate-900 dark:text-white">
                 Remove Dataset
               </h3>
-              <p className="text-xs text-slate-500">{company.company_name}</p>
+              <p className="text-xs text-slate-500">{activeCompanyName}</p>
             </div>
           </div>
           <button
@@ -77,15 +89,15 @@ export const RemoveDatasetDialog: React.FC<RemoveDatasetDialogProps> = ({
           <div className="bg-slate-50 dark:bg-slate-800/40 rounded-xl p-3.5 border border-slate-100 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300 space-y-1.5">
             <div className="flex justify-between">
               <span className="text-slate-400">Company:</span>
-              <span className="font-semibold text-slate-800 dark:text-slate-200">{company.company_name}</span>
+              <span className="font-semibold text-slate-800 dark:text-slate-200">{activeCompanyName}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-400">Dataset File:</span>
-              <span className="font-mono text-slate-700 dark:text-slate-300">{company.dataset_file || 'Standard Dataset'}</span>
+              <span className="font-mono text-slate-700 dark:text-slate-300">{activeDatasetFile}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-400">Total Orders:</span>
-              <span className="font-mono font-bold text-slate-900 dark:text-white">{company.total_orders?.toLocaleString() || 0}</span>
+              <span className="font-mono font-bold text-slate-900 dark:text-white">{activeTotalOrders}</span>
             </div>
           </div>
 

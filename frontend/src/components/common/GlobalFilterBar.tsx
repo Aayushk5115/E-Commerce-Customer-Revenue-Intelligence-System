@@ -44,8 +44,8 @@ export const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
       start = '2021-01-01';
       end = '2021-12-31';
     } else if (preset === 'all') {
-      start = options.min_date;
-      end = options.max_date;
+      start = undefined;
+      end = undefined;
     }
 
     onFilterChange({
@@ -116,7 +116,7 @@ export const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
             className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
           >
             <option value="All">All Categories</option>
-            {options?.categories.map((c) => (
+            {(options?.categories || []).map((c) => (
               <option key={c} value={c}>
                 {c}
               </option>
@@ -136,7 +136,7 @@ export const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
             className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
           >
             <option value="All">All States (10 Regions)</option>
-            {options?.regions.map((r) => (
+            {(options?.regions || []).map((r) => (
               <option key={r} value={r}>
                 {r} State
               </option>
@@ -156,7 +156,7 @@ export const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
             className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
           >
             <option value="All">All Channels</option>
-            {options?.channels.map((ch) => (
+            {(options?.channels || []).map((ch) => (
               <option key={ch} value={ch}>
                 {ch}
               </option>
@@ -176,7 +176,7 @@ export const GlobalFilterBar: React.FC<GlobalFilterBarProps> = ({
             className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
           >
             <option value="All">All RFM Segments</option>
-            {options?.segments.map((s) => (
+            {(options?.segments || []).map((s) => (
               <option key={s} value={s}>
                 {s}
               </option>

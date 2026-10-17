@@ -7,6 +7,8 @@ interface PerformanceMatrixProps {
 }
 
 export const PerformanceMatrix: React.FC<PerformanceMatrixProps> = ({ matrix }) => {
+  if (!matrix) return null;
+
   return (
     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 shadow-sm space-y-4">
       <div>
@@ -15,8 +17,8 @@ export const PerformanceMatrix: React.FC<PerformanceMatrixProps> = ({ matrix }) 
         </h3>
         <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
           Strategic product categorization segmented across Median Revenue ($
-          {(matrix.median_revenue / 1000).toFixed(1)}k) and Median Profit ($
-          {(matrix.median_profit / 1000).toFixed(1)}k).
+          {((matrix.median_revenue || 0) / 1000).toFixed(1)}k) and Median Profit ($
+          {((matrix.median_profit || 0) / 1000).toFixed(1)}k).
         </p>
       </div>
 
@@ -34,11 +36,11 @@ export const PerformanceMatrix: React.FC<PerformanceMatrixProps> = ({ matrix }) 
                 </h4>
               </div>
               <span className="text-xs font-extrabold bg-emerald-200 dark:bg-emerald-800 text-emerald-900 dark:text-emerald-100 px-2.5 py-0.5 rounded-full">
-                {matrix.stars_count} SKUs
+                {matrix.stars_count ?? 0} SKUs
               </span>
             </div>
             <div className="text-xl font-black text-emerald-900 dark:text-emerald-200 mb-1">
-              ${(matrix.stars_revenue / 1000000).toFixed(2)}M
+              ${((matrix.stars_revenue || 0) / 1000000).toFixed(2)}M
             </div>
             <p className="text-xs text-emerald-800/80 dark:text-emerald-400/90 leading-relaxed">
               Top core cash generators. Protect supply chain reliability, invest in premium ads, and maintain zero-stockout priority.
@@ -62,11 +64,11 @@ export const PerformanceMatrix: React.FC<PerformanceMatrixProps> = ({ matrix }) 
                 </h4>
               </div>
               <span className="text-xs font-extrabold bg-indigo-200 dark:bg-indigo-800 text-indigo-900 dark:text-indigo-100 px-2.5 py-0.5 rounded-full">
-                {matrix.high_margin_gems_count} SKUs
+                {matrix.high_margin_gems_count ?? 0} SKUs
               </span>
             </div>
             <div className="text-xl font-black text-indigo-900 dark:text-indigo-200 mb-1">
-              ${(matrix.high_margin_gems_revenue / 1000000).toFixed(2)}M
+              ${((matrix.high_margin_gems_revenue || 0) / 1000000).toFixed(2)}M
             </div>
             <p className="text-xs text-indigo-800/80 dark:text-indigo-400/90 leading-relaxed">
               Extremely profitable per unit but low volume. Uncap marketing budget, test targeted social campaigns, and featured banner placement.
@@ -90,11 +92,11 @@ export const PerformanceMatrix: React.FC<PerformanceMatrixProps> = ({ matrix }) 
                 </h4>
               </div>
               <span className="text-xs font-extrabold bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-100 px-2.5 py-0.5 rounded-full">
-                {matrix.volume_drivers_count} SKUs
+                {matrix.volume_drivers_count ?? 0} SKUs
               </span>
             </div>
             <div className="text-xl font-black text-amber-900 dark:text-amber-200 mb-1">
-              ${(matrix.volume_drivers_revenue / 1000000).toFixed(2)}M
+              ${((matrix.volume_drivers_revenue || 0) / 1000000).toFixed(2)}M
             </div>
             <p className="text-xs text-amber-800/80 dark:text-amber-400/90 leading-relaxed">
               High top-line demand but thin unit margins. Renegotiate supplier COGS, bundle with high-margin accessories, or reduce discount depths.
@@ -118,11 +120,11 @@ export const PerformanceMatrix: React.FC<PerformanceMatrixProps> = ({ matrix }) 
                 </h4>
               </div>
               <span className="text-xs font-extrabold bg-rose-200 dark:bg-rose-800 text-rose-900 dark:text-rose-100 px-2.5 py-0.5 rounded-full">
-                {matrix.underperformers_count} SKUs
+                {matrix.underperformers_count ?? 0} SKUs
               </span>
             </div>
             <div className="text-xl font-black text-rose-900 dark:text-rose-200 mb-1">
-              ${(matrix.underperformers_revenue / 1000000).toFixed(2)}M
+              ${((matrix.underperformers_revenue || 0) / 1000000).toFixed(2)}M
             </div>
             <p className="text-xs text-rose-800/80 dark:text-rose-400/90 leading-relaxed">
               Drain on inventory carrying costs and warehouse storage. Run clearance liquidations and consider phasing out low-turnover items.

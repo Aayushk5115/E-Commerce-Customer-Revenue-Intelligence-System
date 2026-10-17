@@ -124,7 +124,7 @@ export function DataTable<T extends Record<string, any>>({
         <table className="w-full text-left text-xs border-collapse">
           <thead>
             <tr className="bg-slate-50 dark:bg-slate-950/60 border-b border-slate-200/80 dark:border-slate-800 text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">
-              {columns.map((col) => {
+              {(columns || []).map((col) => {
                 const isCurrentSort = sortBy === col.key;
                 const alignClass =
                   col.align === 'right'
@@ -175,7 +175,7 @@ export function DataTable<T extends Record<string, any>>({
                   key={rowIdx}
                   className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
                 >
-                  {columns.map((col) => {
+                  {(columns || []).map((col) => {
                     const alignClass =
                       col.align === 'right'
                         ? 'text-right'
@@ -193,7 +193,7 @@ export function DataTable<T extends Record<string, any>>({
             ) : (
               <tr>
                 <td
-                  colSpan={columns.length}
+                  colSpan={(columns || []).length || 1}
                   className="px-4 py-12 text-center text-slate-400 font-medium text-sm"
                 >
                   No records found matching current query or filters.
@@ -208,8 +208,8 @@ export function DataTable<T extends Record<string, any>>({
       <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
         <div className="flex items-center space-x-3">
           <span>
-            Showing <strong className="text-slate-800 dark:text-white">{data.length}</strong> of{' '}
-            <strong className="text-slate-800 dark:text-white">{totalRecords.toLocaleString()}</strong> records
+            Showing <strong className="text-slate-800 dark:text-white">{(data || []).length}</strong> of{' '}
+            <strong className="text-slate-800 dark:text-white">{(totalRecords || 0).toLocaleString()}</strong> records
           </span>
           {onPageSizeChange && (
             <div className="flex items-center space-x-1.5">

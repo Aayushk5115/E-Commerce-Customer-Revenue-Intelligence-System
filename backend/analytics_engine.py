@@ -461,27 +461,64 @@ class CompanyAnalyticsEngine:
             prev_start = (s_dt - duration).strftime('%Y-%m-%d')
             prev_end = s_dt.strftime('%Y-%m-%d')
             prev_items = self._filter_orders(prev_start, prev_end, category, region, channel, segment)
+            
+            comp_rev = curr_rev
+            comp_profit = curr_profit
+            comp_orders = curr_orders
+            comp_cust = curr_cust
+            comp_aov = curr_aov
+            comp_margin = curr_margin
+            comp_retention = curr_retention
         else:
             if not self.orders_df.empty and self.orders_df['order_date'].notnull().any():
                 max_dt = self.orders_df['order_date'].dropna().max()
                 mid_dt = max_dt - pd.Timedelta(days=365)
                 prev_dt = mid_dt - pd.Timedelta(days=365)
+                
+                # For baseline comparison when viewing "All Time", we compare LTM vs Prior LTM
+                ltm_items = self.master_items_df[
+                    (self.master_items_df['order_status'] != 'Cancelled') &
+                    (self.master_items_df['order_date'] >= mid_dt) &
+                    (self.master_items_df['order_date'] <= max_dt)
+                ]
+                
                 prev_items = self.master_items_df[
                     (self.master_items_df['order_status'] != 'Cancelled') &
                     (self.master_items_df['order_date'] >= prev_dt) &
                     (self.master_items_df['order_date'] < mid_dt)
                 ]
+                
+                comp_rev = float(ltm_items['item_revenue'].sum()) if not ltm_items.empty else 0.0
+                comp_profit = float(ltm_items['item_profit'].sum()) if not ltm_items.empty else 0.0
+                comp_orders = int(ltm_items['order_id'].nunique()) if not ltm_items.empty else 0
+                comp_cust = int(ltm_items['customer_id'].nunique()) if not ltm_items.empty else 0
+                comp_aov = float(comp_rev / comp_orders) if comp_orders > 0 else 0.0
+                comp_margin = float(comp_profit / comp_rev) if comp_rev > 0 else 0.0
+                
+                if not ltm_items.empty:
+                    comp_orders_per_cust = ltm_items.groupby('customer_id')['order_id'].nunique()
+                    comp_repeat_cust = int((comp_orders_per_cust > 1).sum())
+                    comp_retention = float(comp_repeat_cust / comp_cust) if comp_cust > 0 else 0.0
+                else:
+                    comp_retention = 0.0
             else:
                 prev_items = pd.DataFrame()
+                comp_rev = curr_rev
+                comp_profit = curr_profit
+                comp_orders = curr_orders
+                comp_cust = curr_cust
+                comp_aov = curr_aov
+                comp_margin = curr_margin
+                comp_retention = curr_retention
 
-        prev_rev = float(prev_items['item_revenue'].sum()) if len(prev_items) > 0 else curr_rev * 0.88
-        prev_profit = float(prev_items['item_profit'].sum()) if len(prev_items) > 0 else curr_profit * 0.85
-        prev_orders = int(prev_items['order_id'].nunique()) if len(prev_items) > 0 else int(curr_orders * 0.90)
-        prev_cust = int(prev_items['customer_id'].nunique()) if len(prev_items) > 0 else int(curr_cust * 0.92)
-        prev_aov = float(prev_rev / prev_orders) if prev_orders > 0 else curr_aov * 0.98
-        prev_margin = float(prev_profit / prev_rev) if prev_rev > 0 else curr_margin * 0.95
-        prev_orders_per_cust = prev_items.groupby('customer_id')['order_id'].nunique() if len(prev_items) > 0 else pd.Series()
-        prev_repeat_cust = int((prev_orders_per_cust > 1).sum()) if len(prev_orders_per_cust) > 0 else int(curr_cust * 0.28)
+        prev_rev = float(prev_items['item_revenue'].sum()) if not prev_items.empty else comp_rev * 0.88
+        prev_profit = float(prev_items['item_profit'].sum()) if not prev_items.empty else comp_profit * 0.85
+        prev_orders = int(prev_items['order_id'].nunique()) if not prev_items.empty else int(comp_orders * 0.90)
+        prev_cust = int(prev_items['customer_id'].nunique()) if not prev_items.empty else int(comp_cust * 0.92)
+        prev_aov = float(prev_rev / prev_orders) if prev_orders > 0 else comp_aov * 0.98
+        prev_margin = float(prev_profit / prev_rev) if prev_rev > 0 else comp_margin * 0.95
+        prev_orders_per_cust = prev_items.groupby('customer_id')['order_id'].nunique() if not prev_items.empty else pd.Series()
+        prev_repeat_cust = int((prev_orders_per_cust > 1).sum()) if not prev_orders_per_cust.empty else int(comp_cust * 0.28)
         prev_retention = float(prev_repeat_cust / prev_cust) if prev_cust > 0 else 0.28
 
         def calc_pct_change(curr, prev):
@@ -489,7 +526,7 @@ class CompanyAnalyticsEngine:
                 return 0.0
             return float(((curr - prev) / abs(prev)) * 100.0)
 
-        revenue_growth = calc_pct_change(curr_rev, prev_rev)
+        revenue_growth = calc_pct_change(comp_rev, prev_rev)
 
         return {
             "has_dataset": self.has_dataset,
@@ -511,12 +548,12 @@ class CompanyAnalyticsEngine:
             "prev_profit_margin": prev_margin if self.has_profit_data else None,
             "prev_retention_rate": prev_retention,
             "revenue_change_pct": revenue_growth,
-            "profit_change_pct": calc_pct_change(curr_profit, prev_profit) if self.has_profit_data else None,
-            "orders_change_pct": calc_pct_change(curr_orders, prev_orders),
-            "customers_change_pct": calc_pct_change(curr_cust, prev_cust),
-            "aov_change_pct": calc_pct_change(curr_aov, prev_aov),
-            "margin_change_pct": calc_pct_change(curr_margin, prev_margin) if self.has_profit_data else None,
-            "retention_change_pct": calc_pct_change(curr_retention, prev_retention)
+            "profit_change_pct": calc_pct_change(comp_profit, prev_profit) if self.has_profit_data else None,
+            "orders_change_pct": calc_pct_change(comp_orders, prev_orders),
+            "customers_change_pct": calc_pct_change(comp_cust, prev_cust),
+            "aov_change_pct": calc_pct_change(comp_aov, prev_aov),
+            "margin_change_pct": calc_pct_change(comp_margin, prev_margin) if self.has_profit_data else None,
+            "retention_change_pct": calc_pct_change(comp_retention, prev_retention)
         }
 
     def get_revenue_trend(
@@ -1508,10 +1545,14 @@ class CompanyAnalyticsEngine:
                 "id": "ins-1",
                 "category": "Customer Retention",
                 "type": "warning",
+                "severity": "medium",
                 "title": "Repeat Purchase Rate Below Target Threshold",
+                "finding": "Repeat Purchase Rate Below Target Threshold",
                 "description": f"Repeat purchase rate stands at {cust_kpis['repeat_purchase_rate']*100:.1f}%. High volume of single-order customers represents significant uncaptured LTV.",
+                "why_it_matters": f"Repeat purchase rate stands at {cust_kpis['repeat_purchase_rate']*100:.1f}%. High volume of single-order customers represents significant uncaptured LTV.",
                 "recommendation": "Launch automated 30-day post-purchase replenishment and targeted loyalty incentives.",
                 "estimated_impact": "+$180,000 Annualized LTV",
+                "expected_impact": "+$180,000 Annualized LTV",
                 "metric_context": f"Current: {cust_kpis['repeat_purchase_rate']*100:.1f}% | Target: 35.0%"
             })
         else:
@@ -1519,10 +1560,14 @@ class CompanyAnalyticsEngine:
                 "id": "ins-1",
                 "category": "Customer Retention",
                 "type": "opportunity",
+                "severity": "positive",
                 "title": "Strong Customer Loyalty Momentum",
+                "finding": "Strong Customer Loyalty Momentum",
                 "description": f"Repeat purchase rate is healthy at {cust_kpis['repeat_purchase_rate']*100:.1f}%, indicating strong brand affinity and satisfaction.",
+                "why_it_matters": f"Repeat purchase rate is healthy at {cust_kpis['repeat_purchase_rate']*100:.1f}%, indicating strong brand affinity and satisfaction.",
                 "recommendation": "Introduce a VIP tier with exclusive perks to increase AOV on 3rd+ purchases.",
                 "estimated_impact": "+12% AOV on VIP segment",
+                "expected_impact": "+12% AOV on VIP segment",
                 "metric_context": f"Active: {cust_kpis['repeat_customers']:,} Repeat Buyers"
             })
 
@@ -1530,12 +1575,16 @@ class CompanyAnalyticsEngine:
         if cust_kpis['high_risk_customers'] > 0:
             insights.append({
                 "id": "ins-2",
-                "category": "Churn Prevention",
+                "category": "Customer Retention",
                 "type": "critical",
+                "severity": "high",
                 "title": "At-Risk Revenue Alert from Churn AI",
+                "finding": "At-Risk Revenue Alert from Churn AI",
                 "description": f"{cust_kpis['high_risk_customers']:,} customers identified with >70% churn risk, representing ${cust_kpis['revenue_at_risk']:,.0f} in historical value.",
+                "why_it_matters": f"{cust_kpis['high_risk_customers']:,} customers identified with >70% churn risk, representing ${cust_kpis['revenue_at_risk']:,.0f} in historical value.",
                 "recommendation": "Trigger automated win-back SMS/email sequences with dynamic discount codes for dormant VIPs.",
                 "estimated_impact": f"Recover ~${cust_kpis['revenue_at_risk']*0.22:,.0f} in At-Risk Revenue",
+                "expected_impact": f"Recover ~${cust_kpis['revenue_at_risk']*0.22:,.0f} in At-Risk Revenue",
                 "metric_context": f"{cust_kpis['churn_rate']*100:.1f}% Customer Base in High Risk"
             })
 
@@ -1549,10 +1598,14 @@ class CompanyAnalyticsEngine:
                 "id": "ins-3",
                 "category": "Marketing Efficiency",
                 "type": "opportunity",
+                "severity": "positive",
                 "title": f"Reallocate Budget to Top ROAS Channel ({best_chan})",
+                "finding": f"Reallocate Budget to Top ROAS Channel ({best_chan})",
                 "description": f"{best_chan} delivers {best_roas}x ROAS vs {worst_chan} at only {worst_roas}x ROAS.",
+                "why_it_matters": f"{best_chan} delivers {best_roas}x ROAS vs {worst_chan} at only {worst_roas}x ROAS.",
                 "recommendation": f"Shift 25% of {worst_chan} ad spend into {best_chan} campaign scaling.",
                 "estimated_impact": "+18.5% Blended ROAS Improvement",
+                "expected_impact": "+18.5% Blended ROAS Improvement",
                 "metric_context": f"Top Channel ROAS: {best_roas}x"
             })
 
@@ -1560,12 +1613,16 @@ class CompanyAnalyticsEngine:
         if prod_kpis['avg_return_rate'] > 0.06:
             insights.append({
                 "id": "ins-4",
-                "category": "Product Economics",
+                "category": "Product & Margins",
                 "type": "warning",
+                "severity": "medium",
                 "title": "Elevated Return Rate Diagnostics",
+                "finding": "Elevated Return Rate Diagnostics",
                 "description": f"Blended return rate of {prod_kpis['avg_return_rate']*100:.1f}% erodes net margin and inflates reverse logistics costs.",
+                "why_it_matters": f"Blended return rate of {prod_kpis['avg_return_rate']*100:.1f}% erodes net margin and inflates reverse logistics costs.",
                 "recommendation": "Audit top 5 returned SKUs for sizing inaccuracies, fabric complaints, or defective batches.",
                 "estimated_impact": "+1.8% Gross Margin Recovery",
+                "expected_impact": "+1.8% Gross Margin Recovery",
                 "metric_context": f"Current Return Rate: {prod_kpis['avg_return_rate']*100:.1f}%"
             })
 
@@ -1895,6 +1952,10 @@ class MultiCompanyAnalyticsManager:
         for k, v in self.companies_meta.items():
             if k == cid or v.get("company_slug") == cid or k.replace("-", "_") == cid:
                 return v
+        # Graceful fallback for legacy/placeholder company ID
+        if cid in ("company-1", "default", "demo") and self.companies_meta:
+            first_key = list(self.companies_meta.keys())[0]
+            return self.companies_meta[first_key]
         return None
 
     def get_engine(self, company_id: str = "company-1") -> CompanyAnalyticsEngine:
@@ -1907,7 +1968,10 @@ class MultiCompanyAnalyticsManager:
                 break
                 
         if not matched_id:
-            matched_id = "company-1"
+            if cid in ("company-1", "default", "demo") and self.companies_meta:
+                matched_id = list(self.companies_meta.keys())[0]
+            else:
+                matched_id = list(self.companies_meta.keys())[0] if self.companies_meta else "company-1"
 
         if matched_id not in self.engines:
             comp_path = os.path.join(self.companies_data_dir, matched_id)

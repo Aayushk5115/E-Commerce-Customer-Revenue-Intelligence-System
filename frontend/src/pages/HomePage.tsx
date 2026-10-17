@@ -22,6 +22,8 @@ import { fetchCompaniesCatalog } from '../services/api';
 import { AddCompanyModal } from '../components/common/AddCompanyModal';
 import { DatasetDetailsModal } from '../components/common/DatasetDetailsModal';
 import { DataSourceModal } from '../components/common/DataSourceModal';
+import { ViewDatasetModal } from '../components/common/ViewDatasetModal';
+import { RemoveDatasetDialog } from '../components/common/RemoveDatasetDialog';
 import type { CompanyMetadata } from '../types';
 
 export const HomePage: React.FC = () => {
@@ -37,16 +39,25 @@ export const HomePage: React.FC = () => {
   const [selectedCompanyForUpload, setSelectedCompanyForUpload] = useState<CompanyMetadata | null>(null);
   const [selectedCompanyForDetails, setSelectedCompanyForDetails] = useState<CompanyMetadata | null>(null);
   const [selectedCompanyForDataSource, setSelectedCompanyForDataSource] = useState<CompanyMetadata | null>(null);
+  const [selectedCompanyForViewDataset, setSelectedCompanyForViewDataset] = useState<CompanyMetadata | null>(null);
+  const [selectedCompanyForRemoveDataset, setSelectedCompanyForRemoveDataset] = useState<CompanyMetadata | null>(null);
 
   const loadCatalog = async () => {
     setLoading(true);
     setError(null);
     try {
       const data = await fetchCompaniesCatalog();
-      setCompanies(data);
+      if (Array.isArray(data)) {
+        setCompanies(data);
+      } else {
+        console.error('fetchCompaniesCatalog returned non-array:', data);
+        setCompanies([]);
+        setError('Unable to load company analytics directory. Backend may be offline.');
+      }
     } catch (err: any) {
       console.error('Error fetching companies catalog:', err);
       setError('Unable to load company analytics directory. Backend may be offline.');
+      setCompanies([]);
     } finally {
       setLoading(false);
     }
@@ -58,22 +69,32 @@ export const HomePage: React.FC = () => {
 
   const handleCompanyCreated = (newCompany: CompanyMetadata) => {
     setCompanies((prev) => {
-      const exists = prev.some((c) => c.company_id === newCompany.company_id);
+      const safePrev = Array.isArray(prev) ? prev : [];
+      const exists = safePrev.some((c) => c.company_id === newCompany.company_id);
       if (exists) {
-        return prev.map((c) => (c.company_id === newCompany.company_id ? newCompany : c));
+        return safePrev.map((c) => (c.company_id === newCompany.company_id ? newCompany : c));
       }
-      return [newCompany, ...prev];
+      return [newCompany, ...safePrev];
     });
   };
 
-  const industries = ['All', ...Array.from(new Set(companies.map((c) => c.industry).filter(Boolean)))];
+  const safeCompanies = Array.isArray(companies) ? companies : [];
 
-  const filteredCompanies = companies.filter((c) => {
+  const industries = ['All', ...Array.from(new Set(safeCompanies.map((c) => c?.industry).filter(Boolean)))];
+
+  const filteredCompanies = safeCompanies.filter((c) => {
+    if (!c) return false;
+    const name = (c.company_name || '').toLowerCase();
+    const ind = (c.industry || '').toLowerCase();
+    const desc = (c.description || '').toLowerCase();
+    const src = (c.dataset_source || '').toLowerCase();
+    const q = searchQuery.toLowerCase();
+
     const matchesSearch =
-      c.company_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.industry.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.dataset_source.toLowerCase().includes(searchQuery.toLowerCase());
+      name.includes(q) ||
+      ind.includes(q) ||
+      desc.includes(q) ||
+      src.includes(q);
     const matchesIndustry = selectedIndustry === 'All' || c.industry === selectedIndustry;
     return matchesSearch && matchesIndustry;
   });
@@ -484,6 +505,18 @@ export const HomePage: React.FC = () => {
           isOpen={true}
           onClose={() => setSelectedCompanyForDetails(null)}
           company={selectedCompanyForDetails}
+          onOpenViewDataset={() => {
+            setSelectedCompanyForViewDataset(selectedCompanyForDetails);
+            setSelectedCompanyForDetails(null);
+          }}
+          onOpenRemoveDataset={() => {
+            setSelectedCompanyForRemoveDataset(selectedCompanyForDetails);
+            setSelectedCompanyForDetails(null);
+          }}
+          onOpenUploadDataset={() => {
+            setSelectedCompanyForUpload(selectedCompanyForDetails);
+            setSelectedCompanyForDetails(null);
+          }}
           onDatasetRemoved={() => {
             setSelectedCompanyForDetails(null);
             loadCatalog();
@@ -491,6 +524,32 @@ export const HomePage: React.FC = () => {
           onUploadDataset={() => {
             setSelectedCompanyForUpload(selectedCompanyForDetails);
             setSelectedCompanyForDetails(null);
+          }}
+        />
+      )}
+
+      {/* View Raw Dataset Explorer Modal */}
+      {selectedCompanyForViewDataset && (
+        <ViewDatasetModal
+          isOpen={true}
+          onClose={() => setSelectedCompanyForViewDataset(null)}
+          company={selectedCompanyForViewDataset}
+          companyId={selectedCompanyForViewDataset.company_id}
+          companyName={selectedCompanyForViewDataset.company_name}
+        />
+      )}
+
+      {/* Remove Dataset Confirmation Modal */}
+      {selectedCompanyForRemoveDataset && (
+        <RemoveDatasetDialog
+          isOpen={true}
+          onClose={() => setSelectedCompanyForRemoveDataset(null)}
+          company={selectedCompanyForRemoveDataset}
+          companyId={selectedCompanyForRemoveDataset.company_id}
+          companyName={selectedCompanyForRemoveDataset.company_name}
+          onDatasetRemoved={() => {
+            setSelectedCompanyForRemoveDataset(null);
+            loadCatalog();
           }}
         />
       )}

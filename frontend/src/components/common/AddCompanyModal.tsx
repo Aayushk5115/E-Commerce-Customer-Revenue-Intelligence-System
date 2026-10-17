@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   X,
@@ -67,6 +67,30 @@ export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({
 
   // Confirmation Modal for Remove File
   const [showRemoveConfirm, setShowRemoveConfirm] = useState<boolean>(false);
+
+  // Reset state whenever modal is opened or targetCompany changes
+  useEffect(() => {
+    if (isOpen) {
+      setStep(targetCompany ? 2 : 1);
+      setCompanyName(targetCompany?.company_name || '');
+      setCompanySlug(targetCompany?.company_slug || '');
+      setIndustry(targetCompany?.industry || 'E-Commerce');
+      setBaseCurrency(targetCompany?.base_currency || 'INR');
+      setLogoBadge(targetCompany?.logo_badge || '🏢');
+      setDescription(targetCompany?.description || '');
+      setSelectedFile(null);
+      setPreviewData(null);
+      setColumnMapping({});
+      setUploadError(null);
+      setIsPreviewLoading(false);
+      setIsSubmitting(false);
+      setCreatedCompany(null);
+      setShowRemoveConfirm(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  }, [isOpen, targetCompany]);
 
   if (!isOpen) return null;
 
@@ -573,7 +597,7 @@ export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({
           )}
 
           {/* STEP 3: COLUMN MAPPING & DATA PREVIEW */}
-          {step === 3 && previewData && (
+          {step === 3 && (previewData ? (
             <div className="space-y-6">
               {/* Dataset Summary Cards */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 rounded-2xl bg-slate-950 border border-slate-800 text-xs">
@@ -722,7 +746,19 @@ export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({
                 </button>
               </div>
             </div>
-          )}
+          ) : (
+            <div className="py-12 text-center space-y-3">
+              <FileSpreadsheet size={36} className="text-slate-600 mx-auto" />
+              <p className="text-sm font-semibold text-slate-300">No dataset preview available</p>
+              <button
+                type="button"
+                onClick={() => setStep(2)}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
+              >
+                Go to File Upload
+              </button>
+            </div>
+          ))}
 
           {/* STEP 4: PROCESSING / SUCCESS */}
           {step === 4 && (
@@ -812,7 +848,18 @@ export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({
                     </button>
                   </div>
                 </div>
-              ) : null}
+              ) : (
+                <div className="py-12 text-center space-y-3">
+                  <p className="text-sm font-semibold text-slate-300">Ready to upload company dataset</p>
+                  <button
+                    type="button"
+                    onClick={() => setStep(targetCompany ? 2 : 1)}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
+                  >
+                    Go Back
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

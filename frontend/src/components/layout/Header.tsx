@@ -205,6 +205,7 @@ export const Header: React.FC<HeaderProps> = ({
         <ViewDatasetModal
           isOpen={isViewDatasetOpen}
           onClose={() => setIsViewDatasetOpen(false)}
+          company={currentCompany}
           companyId={currentCompany.company_id}
           companyName={currentCompany.company_name}
         />
@@ -215,6 +216,7 @@ export const Header: React.FC<HeaderProps> = ({
         <RemoveDatasetDialog
           isOpen={isRemoveDatasetOpen}
           onClose={() => setIsRemoveDatasetOpen(false)}
+          company={currentCompany}
           companyId={currentCompany.company_id}
           companyName={currentCompany.company_name}
           onDatasetRemoved={() => {
